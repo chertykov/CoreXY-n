@@ -1,0 +1,3 @@
+%.scad: %.py
+	python $< > $@
+
