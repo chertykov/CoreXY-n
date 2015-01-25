@@ -75,6 +75,9 @@ class Carriage_x:
         )
 
 class Gantry:
+    xy_overlap = Y_rod.r        # Overlap
+    xz_offset = - (Y_rod.r + X_rod.r + 10) # X rods lower than Y
+    
     def __init__ (self):
         self.x_rod1 = X_rod ()
         self.x_rod2 = X_rod ()
@@ -87,6 +90,10 @@ class Gantry:
 
         self.car_x = Carriage_x ()
 
+    def draw_car(self):
+        return (up (self.xz_offset)
+                (car.draw()))
+        
     def draw (self):
         d = (left (self.size_x / 2)
              (rotate ([90, 0, 0])
@@ -96,16 +103,19 @@ class Gantry:
              (rotate ([90, 0, 0])
               (down (self.y_rod2.l / 2)
                (self.y_rod2.draw ()))))
-        d += (back (self.car_x.base / 2)
-              (rotate ([0, 90, 0])
-               (down (self.x_rod1.l / 2)
-                (self.x_rod1.draw ()))))
-        d += (forward (self.car_x.base / 2)
-              (rotate ([0, 90, 0])
-               (down (self.x_rod1.l / 2)
-                (self.x_rod1.draw ()))))
+        d += (up (self.xz_offset)
+              (back (self.car_x.base / 2)
+               (rotate ([0, 90, 0])
+                (down (self.x_rod1.l / 2)
+                 (self.x_rod1.draw ())))))
+        d += (up (self.xz_offset)
+              (forward (self.car_x.base / 2)
+               (rotate ([0, 90, 0])
+                (down (self.x_rod1.l / 2)
+                 (self.x_rod1.draw ())))))
+        d += self.draw_car()
         return d
-        
+
 
 pulley1 = Idler_pulley ()
 lm8 = Lm8uu ()
@@ -116,7 +126,7 @@ g = Gantry ()
 
 car = Carriage_x ()
 
-draw = cube ([2,3,4]) + g.draw () + car.draw ()
+draw = g.draw ()
 
 sys.stderr.write("hello %d\n" % X_rod.l)
 
