@@ -1,7 +1,7 @@
 
-all: idler.scad
+all: parts.scad
 
-idler.scad: idler.py 
+parts.scad: parts.py 
 
 %.scad: %.py
 	python $< > $@
