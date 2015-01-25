@@ -60,10 +60,24 @@ class Z_rod (Rod):
 
 
 """ Nema 17 stepper. """
+use ("nema17.scad")
 
 class Nema17:
-    
-    
+    side_size = 42.2
+    mount_dist = 31.04
+    mount_r = 3 / 2
+    mount_depth = 4.5
+    mount_lip = -1
+    round_extrusion_r = 22 / 2
+    round_extrusion_h = 1.9
+    shaft_r = 5 / 2
+    shaft_l = 19
+    shaft_flat = 0.5
+
+    def draw (self):
+        return draw_nema17()
+
+
 class Carriage_x:
     l = Lm8uu.l * 2
     h = Lm8uu.r_o * 4
@@ -101,14 +115,16 @@ class Gantry:
                 (car.draw()))
         
     def draw (self):
-        d = (left (self.size_x / 2)
+        # Y rods
+        d = (left (self.size_x / 2 - self.y_rod1.r)
              (rotate ([90, 0, 0])
               (down (self.y_rod1.l / 2)
                (self.y_rod1.draw ()))))
-        d += (right (self.size_x / 2)
+        d += (right (self.size_x / 2 - self.y_rod2.r)
              (rotate ([90, 0, 0])
               (down (self.y_rod2.l / 2)
                (self.y_rod2.draw ()))))
+        # X rods
         d += (up (self.xz_offset)
               (back (self.car_x.base / 2)
                (rotate ([0, 90, 0])
@@ -117,8 +133,9 @@ class Gantry:
         d += (up (self.xz_offset)
               (forward (self.car_x.base / 2)
                (rotate ([0, 90, 0])
-                (down (self.x_rod1.l / 2)
-                 (self.x_rod1.draw ())))))
+                (down (self.x_rod2.l / 2)
+                 (self.x_rod2.draw ())))))
+        # Carriage
         d += self.draw_car()
         return d
 
@@ -133,6 +150,9 @@ g = Gantry ()
 car = Carriage_x ()
 
 draw = g.draw ()
+
+#nema17 = Nema17()
+#draw = nema17.draw()
 
 sys.stderr.write("hello %d\n" % X_rod.l)
 

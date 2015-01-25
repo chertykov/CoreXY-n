@@ -4,14 +4,14 @@ union() {
 	union() {
 		union() {
 			union() {
-				translate(v = [-174, 0, 0]) {
+				translate(v = [-170, 0, 0]) {
 					rotate(a = [90, 0, 0]) {
 						translate(v = [0, 0, -168]) {
 							cylinder(h = 337, r = 4);
 						}
 					}
 				}
-				translate(v = [174, 0, 0]) {
+				translate(v = [170, 0, 0]) {
 					rotate(a = [90, 0, 0]) {
 						translate(v = [0, 0, -168]) {
 							cylinder(h = 337, r = 4);
