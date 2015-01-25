@@ -58,6 +58,12 @@ class Z_rod (Rod):
     r = 12 / 2
     l = 339
 
+
+""" Nema 17 stepper. """
+
+class Nema17:
+    
+    
 class Carriage_x:
     l = Lm8uu.l * 2
     h = Lm8uu.r_o * 4
