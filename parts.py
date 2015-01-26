@@ -5,6 +5,10 @@ import math
 from solid import *
 from solid.utils import * # Not required, but the utils module is useful
 
+class Const_size:
+    car_y_len = 20
+    xz_distance = 10 # Z distance between Y rod surface and X rod surface
+    
 class Idler_pulley:
     """Pulley constructed from two 3x10x4 mm flanged bearings"""
     r_i = 3 / 2    # internal radius
@@ -46,11 +50,11 @@ class Rod:
     def draw (self):
         return cylinder (r = self.r, h = self.l)
 
-class X_rod (Rod):
+class Y_rod (Rod):
     r = 8 / 2
     l = 348
 
-class Y_rod (Rod):
+class X_rod (Rod):
     r = 8 / 2
     l = 337
 
@@ -77,26 +81,49 @@ class Nema17:
     def draw (self):
         return draw_nema17()
 
+class Carriage:
+    l = None
+    h = None
+    w = None
+    base = 40                   # distance between X rods.
 
-class Carriage_x:
-    l = Lm8uu.l * 2
-    h = Lm8uu.r_o * 4
-    w = Lm8uu.l * 2
-    base = w - (1 + Lm8uu.r_o) * 2
+class Carriage_x (Carriage):
+    l = Lm8uu.l * 2 + 1
+    h = Lm8uu.r_o * 2
+    base = 40
+    w = base + Lm8uu.r_o * 2 + 1 * 2
 
     def draw (self):
-        return (cube ([self.l, self.w, self.h], center=True)
+        return (up (self.h / 2) (cube ([self.l, self.w, self.h], center=True))
                 - (back (self.base / 2)
-                   (rotate ([0, 90, 0])
-                    (cylinder (r = Lm8uu.r_o, h = self.l + 2, center=True))))
+                    (rotate ([0, 90, 0])
+                     (cylinder (r = Lm8uu.r_o, h = self.l + 2, center=True))))
                 - (forward (self.base / 2)
                    (rotate ([0, 90, 0])
                     (cylinder (r = Lm8uu.r_o, h = self.l + 2, center=True))))
         )
 
+class Carriage_y (Carriage):
+    wall = 3
+    l = Const_size.car_y_len
+    w = Carriage.base + 2 * (X_rod.r + wall)
+    def __init__ (self):
+        self.h = Lm8uu.r_o + self.wall + abs(Gantry.xz_offset) + X_rod.r + self.wall
+        if self.w < Lm8uu.l * 2 + 1:
+            self.w = Lm8uu.l * 2 + 1
+        
+        sys.stderr.write("Y carriage w: %g\n" % self.w)
+
+    def draw(self):
+        d = (translate ([-self.l / 2, -self.w / 2, -self.h + self.wall + Lm8uu.r_o])
+             (cube([self.l, self.w, self.h])))
+        d -= rotate ([90, 0, 0]) (cylinder (r = Lm8uu.r_o, h = self.w + 2, center=True))
+        return d
+        
+    
 class Gantry:
     xy_overlap = Y_rod.r        # Overlap
-    xz_offset = - (Y_rod.r + X_rod.r + 10) # X rods lower than Y
+    xz_offset = - (Y_rod.r + X_rod.r + Const_size.xz_distance) # X rods lower than Y
     
     def __init__ (self):
         self.x_rod1 = X_rod ()
@@ -109,18 +136,29 @@ class Gantry:
         self.size_y = Y_rod.l
 
         self.car_x = Carriage_x ()
+        self.car_y1 = Carriage_y ()
+        self.car_y2 = Carriage_y ()
+
+        self.print_area_x = (X_rod.l - 2*Y_rod.r - 2*self.xy_overlap
+                             - self.car_x.l
+                             - self.car_y1.l / 2 - self.car_y2.l / 2)
+
+        sys.stderr.write("X print area: %g\n" % self.print_area_x)
+
 
     def draw_car(self):
         return (up (self.xz_offset)
-                (car.draw()))
+                (self.car_x.draw())
+                + (left (self.size_x / 2 - self.xy_overlap) (self.car_y1.draw()))
+        )
         
     def draw (self):
         # Y rods
-        d = (left (self.size_x / 2 - self.y_rod1.r)
+        d = (left (self.size_x / 2 - self.xy_overlap)
              (rotate ([90, 0, 0])
               (down (self.y_rod1.l / 2)
                (self.y_rod1.draw ()))))
-        d += (right (self.size_x / 2 - self.y_rod2.r)
+        d += (right (self.size_x / 2 - self.xy_overlap)
              (rotate ([90, 0, 0])
               (down (self.y_rod2.l / 2)
                (self.y_rod2.draw ()))))
