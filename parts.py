@@ -8,6 +8,9 @@ from solid.utils import * # Not required, but the utils module is useful
 class Const_size:
     car_y_len = 20
     xz_distance = 10 # Z distance between Y rod surface and X rod surface
+    rod_wall = 3     # plastick wall for rod support
+    m3_wall = 3      # plastick wall for m3 screw support
+    m3_r = 3.4 / 2   # M3 screw hole radius
     
 class Idler_pulley:
     """Pulley constructed from two 3x10x4 mm flanged bearings"""
@@ -63,6 +66,19 @@ class Z_rod (Rod):
     l = 339
 
 
+class Y_support:
+    h = (2 * Y_rod.r + 2 * Const_size.rod_wall
+         + 2 * (Const_size.m3_r + 2 * Const_size.m3_wall))
+    w = 2 * Y_rod.r + Const_size.rod_wall
+    t = 15      #  support thickness
+
+    def __init__(self):
+        self.overlap = self.t
+
+    def draw (self):
+        d = right (Const_size.rod_wall / 2) (cube ([w, t, h], center=True))
+
+    
 """ Nema 17 stepper. """
 use ("nema17.scad")
 
@@ -104,7 +120,7 @@ class Carriage_x (Carriage):
         )
 
 class Carriage_y (Carriage):
-    wall = 3
+    wall = Const_size.rod_wall
     l = Const_size.car_y_len
     w = Carriage.base + 2 * (X_rod.r + wall)
     def __init__ (self):
@@ -139,11 +155,24 @@ class Gantry:
         self.car_y1 = Carriage_y ()
         self.car_y2 = Carriage_y ()
 
-        self.print_area_x = (X_rod.l - 2*Y_rod.r - 2*self.xy_overlap
+        self.y_support1 = Y_support ()
+        self.y_support2 = Y_support ()
+        self.y_support3 = Y_support ()
+        self.y_support4 = Y_support ()
+        
+        self.print_area_x = (X_rod.l
                              - self.car_x.l
+                             - 2*Y_rod.r
+                             - 2*self.xy_overlap
                              - self.car_y1.l / 2 - self.car_y2.l / 2)
-
+        self.print_area_y = (Y_rod.l
+                             - 2 * self.y_support1.overlap
+                             - Nema17.side_size
+                             - self.car_x.l)
+                             
+        
         sys.stderr.write("X print area: %g\n" % self.print_area_x)
+        sys.stderr.write("Y print area: %g\n" % self.print_area_y)
 
 
     def draw_car(self):
