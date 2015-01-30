@@ -7,7 +7,7 @@ from solid.utils import * # Not required, but the utils module is useful
 
 class Const_size:
     car_y_len = 20
-    xz_distance = 10 # Z distance between Y rod surface and X rod surface
+    xz_distance = 20 # Z distance between Y rod surface and X rod surface
     rod_wall = 3     # plastick wall for rod support
     m3_wall = 3      # plastick wall for m3 screw support
     m3_r = 3.4 / 2   # M3 screw hole radius
@@ -103,6 +103,10 @@ class Carriage:
     w = None
     base = 40                   # distance between X rods.
 
+    def report (self):
+        sys.stderr.write("Carriage X: Size [%g, %g, %g], base %g\n" %
+                         (self.l, self.w, self.h, self.base))
+
 class Carriage_x (Carriage):
     l = Lm8uu.l * 2 + 1
     h = Lm8uu.r_o * 2
@@ -118,6 +122,11 @@ class Carriage_x (Carriage):
                    (rotate ([0, 90, 0])
                     (cylinder (r = Lm8uu.r_o, h = self.l + 2, center=True))))
         )
+        
+    def report (self):
+        Carriage.report(self)
+        sys.stderr.write("     Pivot point:  X - center, Y - center, Z - LM8UU axle\n")
+
 
 class Carriage_y (Carriage):
     wall = Const_size.rod_wall
@@ -169,8 +178,7 @@ class Gantry:
                              - 2 * self.y_support1.overlap
                              - Nema17.side_size
                              - self.car_x.l)
-                             
-        
+        self.car_x.report()
         sys.stderr.write("X print area: %g\n" % self.print_area_x)
         sys.stderr.write("Y print area: %g\n" % self.print_area_y)
 
