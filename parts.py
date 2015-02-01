@@ -11,6 +11,7 @@ class Const_size:
     rod_wall = 3     # plastick wall for rod support
     m3_wall = 3      # plastick wall for m3 screw support
     m3_r = 3.4 / 2   # M3 screw hole radius
+    m3_screw_r = 3.2 / 2  # Screw without nut. Tight.
     
 class Idler_pulley:
     """Pulley constructed from two 3x10x4 mm flanged bearings"""
@@ -215,16 +216,44 @@ class Gantry:
         return d
 
 
+
+class Test_support:
+    s_y = 20
+    s_z = 28
+    s_x = 20
+    wall = 4
+
+    def __init__(self):
+        self.rr = Const_size.m3_wall + Const_size.m3_r
+        self.idler_offset = self.s_x - self.rr
+
+    def draw (self):
+        d = hull () (cylinder (r = self.rr, h = self.s_z, center=True),
+                     (left (self.idler_offset)
+                      (cube ([0.1, self.s_y, self.s_z], center=True))))
+        # M3 screw holes
+        d -= cylinder (r = Const_size.m3_screw_r, h = self.s_z + 20, center=True, segments = 8)
+        # Idlers place
+        d -= (right (self.s_x / 2 - Idler_pulley.r_f - 2)
+              (cube ([self.s_x, self.s_y, Idler_pulley.h * 2 + 0.6 + 0.1], center=True)))
+#        d += (color ("red")
+#               (Idler_pulley().draw ()))
+        return rotate ([0,-90,0]) (d) 
+        
 pulley1 = Idler_pulley ()
 lm8 = Lm8uu ()
 lm12 = Lm12uu ()
 x_rod = X_rod()
+
+t_c = Test_support ()
 
 g = Gantry ()
 
 car = Carriage_x ()
 
 draw = g.draw ()
+
+draw = t_c.draw ()
 
 #nema17 = Nema17()
 #draw = nema17.draw()
