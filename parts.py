@@ -219,20 +219,20 @@ class Gantry:
 
 class Test_support:
     s_y = 20
-    s_z = 28
+    s_z = 35
     s_x = 20
     wall = 4
 
     def __init__(self):
-        self.rr = Const_size.m3_wall + Const_size.m3_r
+        self.rr = Const_size.m3_wall + Const_size.m3_r + 0.5
         self.idler_offset = self.s_x - self.rr
 
-    def draw (self):
-        d = hull () (cylinder (r = self.rr, h = self.s_z, center=True),
-                     (left (self.idler_offset)
-                      (cube ([0.1, self.s_y, self.s_z], center=True))))
+    def draw(self):
+        d = hull()(cylinder (r = self.rr, h = self.s_z, center=True),
+                   (left (self.idler_offset)
+                    (cube ([0.01, self.s_y, self.s_z], center=True))))
         # M3 screw holes
-        d -= cylinder (r = Const_size.m3_screw_r, h = self.s_z + 20, center=True, segments = 8)
+        d -= cylinder(r = Const_size.m3_screw_r, h = self.s_z + 20, center=True, segments = 8)
         # Idlers place
         d -= (right (self.s_x / 2 - Idler_pulley.r_f - 2)
               (cube ([self.s_x, self.s_y, Idler_pulley.h * 2 + 0.6 + 0.1], center=True)))
