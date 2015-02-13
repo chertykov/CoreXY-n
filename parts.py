@@ -74,7 +74,13 @@ class Const_size:
     m3_wall = 3                 # plastick wall for m3 screw support
     m3_r = 3.4 / 2.0            # M3 screw hole radius
     m3_screw_r = 3.2 / 2.0      # Screw without nut. Tight.
-    m3_washer_h = 0.6           # really it 0.5
+    m3_washer_h = 0.5           # really it 0.5
+    m3_washer_r_o = 7 / 2;
+    m3_nut_r = 6.7 / 2;
+    m3_nut_h = 2.5;
+    m3_head_r = 5.7 / 2;        # real 5.4
+    m3_head_h = 3;
+
     support_line_width = 0.5    # support line width
     support_brim_width = 1
     support_brim_height = 0.2
