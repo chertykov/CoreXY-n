@@ -307,7 +307,7 @@ class Extruder:
     pass
 
 if __name__ == "__main__":        
-    shaft = Extruder_shaft (Extruder_lever.h + 0.2)
+    shaft = Extruder_shaft (Extruder_lever.h + 0.4)
     mk8 = Mk8_gear()
     draw = up (0)
     #draw = ex.draw_base (look_inside=False)
@@ -329,5 +329,5 @@ if __name__ == "__main__":
     #    draw += down (base.shaft_hous_h) (background (motor.draw()))
 
     #draw = base.draw () + shaft.draw(print_=True)
-    draw = (lever.draw())
+    draw = shaft.draw(print_=True) #(lever.draw())
     print scad_render(draw)
