@@ -70,6 +70,7 @@ class Z_rod (Rod):
     l = 339
 
 class Const_size:
+    filament_d = 1.75
     rod_wall = 3                # plastick wall for rod support
     m3_wall = 3                 # plastick wall for m3 screw support
     m3_r = 3.4 / 2.0            # M3 screw hole radius
@@ -126,6 +127,48 @@ class Nema17:
     def draw (self):
         return draw_nema17()
 
+class Bearing:
+    def __init__(self, di, do, h):
+        self.d_i = float (di)
+        self.d_o = float (do)
+        self.h = float (h)
+        
+    def draw(self):
+        d = cylinder (d = self.d_o, h = self.h, center=True)
+        d -= cylinder (d = self.d_i, h = self.h + 1, center=True)
+        return d
+    
+
+class Mk8_gear:
+    h = 11.0
+    d_i = 5.0
+    d_o = 9.0
+    d_groove = 7.3
+    h_groove = 8.0
+    set_screw_d = 3.0
+    set_screw_h = 3.0
+    set_screw_pos = 3.0         # Height of set screw hole.
+    
+    def draw(self):
+        d = cylinder (d = self.d_o, h = self.h)
+        d -= down (1) (cylinder (d = self.d_i, h = self.h + 2))
+        # Sphere - knife.
+        sphere_d = 5.0
+        s = (translate ([0, self.d_groove / 2.0 + sphere_d / 2.0, self.h_groove])
+             (sphere (d = sphere_d, segments=16)))
+#        s = debug (s)
+        for a in xrange (0, 360, 10):
+            d -= rotate ([0, 0, a]) (s)
+        # Set screw. Draw it 8 times to better understand circular size.
+        s = cylinder (d = self.set_screw_d, h = self.set_screw_h)
+        s = rotate ([90, 0, 0]) (s)
+        s = up (self.set_screw_pos) (back (self.d_i / 2) (s))
+        s.set_modifier ('%')
+        for a in xrange (0, 360, 360 / 8):
+            d += rotate ([0, 0, a]) (s)
+        return d
+
+    
 class Carriage:
     l = None
     h = None
