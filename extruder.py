@@ -37,11 +37,14 @@ class Spring:
 class Extruder_shaft:
     d_o = 8                      # diametr of lever shaft
     head_d_o = d_o + 2
+    head_h = Size.m3_head_h + 1
     segs = 128
 
     def __init__(self, h):
+        """
+        h - height of the shaft
+        """
         self.h = h
-        self.head_h = Size.m3_head_h + 1
 
     def report(self):
         sys.stderr.write("Shaft H: %g head H: %g head D: %g\n"
@@ -78,11 +81,13 @@ class Extruder_base:
     round_d = motor.side_size - motor.mount_dist # round of plate corners
 
     def __init__(self, groove_h, lever):
-        self.filament_dist = groove_h # Distance from filament to motor base.
+        """        
+        groove_h : distance from filament to motor base.
+        lever : Extruder_lever object.
+        """
+        self.shaft_base_h = groove_h - lever.h / 2.0
 
-        self.shaft_hous_h = groove_h - lever.h / 2.0
-
-        if self.shaft_hous_h < self.base_h + 0.2:
+        if self.shaft_base_h < self.base_h + 0.2:
             sys.stderr.write ("Too low 'groove_h' parameter.\n")
             sys.exit(1)
             
@@ -90,19 +95,18 @@ class Extruder_base:
         self.spring_x = self.lever.spring_offset_x
         self.spring_y = self.lever.spring_offset_y
         self.spring_z = groove_h
-    
 
     def report(self):
-        m3_len = self.lever.shaft.h - Size.m3_head_h + self.shaft_hous_h
-        sys.stderr.write("Base shaft H: %g  M3 length: %g\n"
-                         % (self.shaft_hous_h, m3_len))
+        m3_len = self.lever.shaft.h - Size.m3_head_h + self.shaft_base_h
+        sys.stderr.write("Shaft base H: %g  M3 length: %g\n"
+                         % (self.shaft_base_h, m3_len))
     def draw(self):
-        c = cylinder (d = self.lever.shaft_hous_d, h = self.base_h)
+        c = cylinder (d = self.lever.shaft_hole_d, h = self.base_h)
         m1 = translate ([-motor.mount_dist / 2.0, motor.mount_dist / 2.0, 0]) (c)
         c = cylinder (d = self.round_d, h = self.base_h)
         m2 = translate ([motor.mount_dist / 2.0, motor.mount_dist / 2.0, 0]) (c)
         d = hull () (m2, m1)
-        c1 = cylinder (d = self.lever.shaft_hous_d, h = self.shaft_hous_h)
+        c1 = cylinder (d = self.lever.shaft_hole_d, h = self.shaft_base_h)
         d += translate ([-motor.mount_dist / 2.0, motor.mount_dist / 2.0, 0]) (c1)
 
         p = cube ([motor.side_size / 2.0, motor.side_size / 2.0, self.base_h])
@@ -111,35 +115,35 @@ class Extruder_base:
         d += p
         d -= cylinder (r = motor.round_extrusion_r + 1, h = self.base_h * 3, center=True)
 
-        # spring support
+        # Spring support.
         ss_x = self.support_wall * 2 + Spring.d_o + 1
-        ss_y = motor.mount_dist / 2.0 - self.lever.shaft_hous_d / 2.0
-        ss_z = self.shaft_hous_h + self.lever.h
+        ss_y = motor.mount_dist / 2.0 - self.lever.shaft_hole_d / 2.0
+        ss_z = self.shaft_base_h + self.lever.h
         ss_base = (back (base_min_y)
                    (right (self.spring_x - ss_x / 2.0)
                     (cube([ss_x, ss_y, self.base_h]))))
 
         ss_head = (back (base_min_y)
                    (right (self.spring_x)
-                    (up (self.shaft_hous_h + self.lever.h / 2.0)
+                    (up (self.shaft_base_h + self.lever.h / 2.0)
                      (rotate ([-90, 0, 0])
                       (cylinder (d = ss_x, h = ss_y))))))
 
-        # support jib
-        jib_offset_x = -self.support_wall / 2.0 + ss_x / 2.0
+        # Spring support buttress
+        buttress_offset_x = -self.support_wall / 2.0 + ss_x / 2.0
 
-        jibs = up(0)
-        for offset in [-jib_offset_x, jib_offset_x]:
-            jib1 = (translate ([self.spring_x - offset,
-                                ss_y - self.support_wall / 2.0,
-                                0])
-                    (cylinder (d = self.support_wall, h = self.base_h, segments=16)))
-            jib2 = (right (self.spring_x - offset)
-                    (cylinder (d = self.support_wall, h = self.spring_z, segments=16)))
-            jibs += hull () (jib1 + jib2)
+        buttress = up(0)
+        for offset in [-buttress_offset_x, buttress_offset_x]:
+            buttress1 = (translate ([self.spring_x - offset,
+                                     ss_y - self.support_wall / 2.0,
+                                     0])
+                         (cylinder (d = self.support_wall, h = self.base_h, segments=16)))
+            buttress2 = (right (self.spring_x - offset)
+                         (cylinder (d = self.support_wall, h = self.spring_z, segments=16)))
+            buttress += hull () (buttress1 + buttress2)
 
         
-        d += hull () (ss_base, m2) + hull () (ss_base, ss_head) # + jibs
+        d += hull () (ss_base, m2) + hull () (ss_base, ss_head) # + buttress
 
         # Spring housing
         spr_d = Spring.d_o + 0.6
@@ -151,7 +155,7 @@ class Extruder_base:
         d -= cylinder (r = motor.round_extrusion_r + 1, h = 4, center=True)
         
         # Mount holes
-        hole = cylinder (r = Size.m3_r, h = self.shaft_hous_h + 2, segments=16)
+        hole = cylinder (r = Size.m3_r, h = self.shaft_base_h + 2, segments=16)
         for n in [1,-1]:
             d -= (translate ([n * motor.mount_dist / 2.0, motor.mount_dist / 2.0, -1])
                   (hole))
@@ -165,22 +169,22 @@ class Extruder_base:
 
 class Extruder_lever:
     clr = 0.2                  # Diametr clearance
-    handle_extra_l = 15.0
+    grip_extra_l = 15.0
     finger_d = 20.0
     h = bearing.h + 1.0 + 3 * 2
     
     def __init__(self, shaft, gear):
         self.shaft = shaft
-        self.shaft_hous_d = self.shaft.head_d_o + 2 + 2 * self.clr
+        self.shaft_hole_d = self.shaft.head_d_o + 2 + 2 * self.clr
         self.bearing_hous_d = bearing.d_o + 4
         self.spring_offset_x = motor.mount_dist / 2.0
-        self.spring_offset_y = motor.mount_dist / 2.0 - self.shaft_hous_d / 2.0 + 2
+        self.spring_offset_y = motor.mount_dist / 2.0 - self.shaft_hole_d / 2.0 + 2
         self.gear = gear
 
     def report(self):
         self.shaft.report ()
         sys.stderr.write("Lever H: %g shaft housing D: %g bearing housing D: %g\n"
-                         % (self.h, self.shaft_hous_d, self.bearing_hous_d))
+                         % (self.h, self.shaft_hole_d, self.bearing_hous_d))
 
     def draw(self):
         # Bearing housing
@@ -192,26 +196,26 @@ class Extruder_lever:
                         (bearing_hous))
 
         # Shaft housing
-        shaft_hous = (translate ([-motor.mount_dist / 2, motor.mount_dist / 2, 0])
-                      (cylinder (d = self.shaft_hous_d, h = self.h)))
+        shaft_hole = (translate ([-motor.mount_dist / 2, motor.mount_dist / 2, 0])
+                      (cylinder (d = self.shaft_hole_d, h = self.h)))
         
         # arm
-        arm = (translate ([motor.mount_dist / 2.0 + self.handle_extra_l,
-                          motor.mount_dist / 2.0 - self.shaft_hous_d / 4.0,
+        arm = (translate ([motor.mount_dist / 2.0 + self.grip_extra_l,
+                          motor.mount_dist / 2.0 - self.shaft_hole_d / 4.0,
                           0])
-               (cylinder (d = self.shaft_hous_d / 2.0, h = self.h, segments=16)
+               (cylinder (d = self.shaft_hole_d / 2.0, h = self.h, segments=16)
                 + (forward (1)
-                   (cylinder (d = self.shaft_hous_d / 2.0, h = self.h, segments=16)))))
+                   (cylinder (d = self.shaft_hole_d / 2.0, h = self.h, segments=16)))))
 
         # Cut off finger place
-        fp = (translate ([motor.mount_dist / 2 + self.handle_extra_l / 3 * 2.0,
+        fp = (translate ([motor.mount_dist / 2 + self.grip_extra_l / 3 * 2.0,
                            motor.mount_dist / 2 + self.finger_d / 2,
                            -0.5])
                (cylinder (d = self.finger_d, h = self.h + 1)))
 
-        arm = hull () (shaft_hous + arm) - fp + arm
+        arm = hull () (shaft_hole + arm) - fp + arm
         
-        d = hull () (shaft_hous, bearing_hous) + arm
+        d = hull () (shaft_hole, bearing_hous) + arm
 
         # Shaft hole
         # head
@@ -236,22 +240,22 @@ class Extruder_lever:
         d -= left (bearing_offset) (ibh)
 
         ibc = cube ([bearing_offset * 2 - bearing.d_o + 2,
-                     motor.mount_dist - self.shaft_hous_d,
+                     motor.mount_dist - self.shaft_hole_d,
                      self.h * 3],
                     center=True)
         d -= ibc
 
-        # arm-bearing jib
-        jib_r = bearing.d_o / 2 + 1
-        jib = cylinder (r = jib_r, h = self.h, segments=4)
-        jib -= (translate ([-jib_r / 2, jib_r/2, -1])
-                (cylinder (r = jib_r + 1, h = self.h + 2, segments=4)))
-        jib = (translate ([-bearing_offset + bearing.d_o / 2 - 1,
-                           jib_r * 2,
-                           0])
-               (jib))
+        # arm-bearing buttress
+        buttress_r = bearing.d_o / 2 + 1
+        buttress = cylinder (r = buttress_r, h = self.h, segments=4)
+        buttress -= (translate ([-buttress_r / 2, buttress_r/2, -1])
+                     (cylinder (r = buttress_r + 1, h = self.h + 2, segments=4)))
+        buttress = (translate ([-bearing_offset + bearing.d_o / 2 - 1,
+                                buttress_r * 2,
+                                0])
+                    (buttress))
 
-        d += jib
+        d += debug(buttress)
         
         # Idler bearing screw-shaft hole
         d -= (left (bearing_offset)
@@ -267,8 +271,9 @@ class Extruder_lever:
         filament_path_d = Size.filament_d + 1
         filament_offset = Size.filament_d / 2.0 + self.gear.d_groove / 2.0
 
-        fil = forward (50) (rotate ([90, 0, 0])
-                            (cube ([filament_path_d, filament_path_d, 100], center=True)))
+        fil = (forward (50)
+               (rotate ([90, 0, 0])
+                (cube ([filament_path_d, filament_path_d, 100], center=True))))
 
         fil = hull () (fil, rotate (7, UP_VEC) (fil))
                  
@@ -324,10 +329,10 @@ if __name__ == "__main__":
     draw += base.draw ()
 
     draw = (lever.draw() + shaft.draw(print_=True)
-            + down (base.shaft_hous_h) (base.draw ()))
+            + down (base.shaft_base_h) (base.draw ()))
 
-    #    draw += down (base.shaft_hous_h) (background (motor.draw()))
+    #    draw += down (base.shaft_base_h) (background (motor.draw()))
 
     #draw = base.draw () + shaft.draw(print_=True)
-    draw = shaft.draw(print_=True) #(lever.draw())
+    draw = shaft.draw(print_=True) + (lever.draw())
     print scad_render(draw)
