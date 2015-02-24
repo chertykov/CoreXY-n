@@ -29,35 +29,32 @@ tT5	=2;
 tT10	=3;
 tMXL	=4;
 
+function tooth_to_r(tooths) = tooths*4/(3.14159);
+
+rotate ([0,180,0])
 union ()
 {
-  translate([12,-3,0])
-  rotate([0,0,180])
+  for (nn=[0,1])
+    translate([nn * 12,nn * -4,0])
+      rotate([0,0,nn * 180])
     difference ()
     {
-  
-      translate ([-8, -2, -3])
-	cube ([18,8,8]);
+      translate ([-8, -2.2, -3])
+	cube ([18, 10, 10]);
+      translate ([2, 0.5, 0])
       union ()
       {
-	gt2_belt_angle_clr(6, 6.6, 90, clr=0.3);
+	assign (r_tooth = tooth_to_r (3))
+	  {
+	    gt2_belt_angle_clr(r_tooth, 6.6, 90, clr=0.3);
+	    
+	    rotate ([180,0,180])
+	      gt2_belt_len_clr(10, 6.6, clr=0.3);
 
-	rotate ([180,0,180])
-	  gt2_belt_len_clr(10, 6.6, clr=0.3);
-      }
-    }
-
-  difference ()
-    {
-  
-      translate ([-8, -2, -3])
-	cube ([18,8,8]);
-      union ()
-      {
-	gt2_belt_angle_clr(6, 6.6, 90, clr=0.3);
-
-	rotate ([180,0,180])
-	  gt2_belt_len_clr(10, 6.6, clr=0.3);
+	    translate ([r_tooth, 10 + r_tooth, 0])
+	      rotate ([180,0,-90])
+	      gt2_belt_len_clr(10, 6.6, clr=0.3);
+	  }
       }
     }
 }
