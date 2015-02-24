@@ -108,10 +108,10 @@ class Y_support:
         d = right (Const_size.rod_wall / 2.0) (cube ([w, t, h], center=True))
 
     
-""" Nema 17 stepper. """
 use ("nema17.scad")
 
 class Nema17:
+    """ Nema 17 stepper. """
     side_size = 42.2
     length = 39.0
     mount_dist = 31.04
