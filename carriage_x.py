@@ -34,8 +34,9 @@ class Carriage_x (Carriage):
     def __init__(self, belt_z):
         """belt_z - distance from center of X rod to belt."""
         self.belt_z = belt_z
-        self.base_h = Belt.h + 5
-        self.h = self.base_h + Belt.h
+        self.base_h = Belt.width + 5
+        self.h = self.base_h + Belt.width
+        self.belt = Belt()
         
 
     def draw_zip_channel(self):
@@ -51,7 +52,7 @@ class Carriage_x (Carriage):
     def draw_belt_trap(self):
         belt_trap_l = self.w / 2 - Idler_pulley.r_w + Const_size.rod_wall
         d = (translate ([0, self.w / 2.0 - belt_trap_l , -1])
-             (cube ([self.belt_trap_w, belt_trap_l, Belt.h + 1])))
+             (cube ([self.belt_trap_w, belt_trap_l, Belt.width + 1])))
         return d
 
     def draw (self, draw_support = False, draw_motor=False, look_inside=False):
@@ -61,12 +62,23 @@ class Carriage_x (Carriage):
               (translate ([self.l / 2.0 - self.belt_trap_w, 0 ,0])
               (self.draw_belt_trap()))) for i in [0,180]]
         # LM8UU seats
-        c = (translate ([0, 0, -self.base_h])
-             (rotate ([0, 90, 0])
-              (cylinder (r = Lm8uu.r_o + self.lm8uu_clr, h = self.l + 1,
-                         center=True, segments = 32))))
-        d -= [(translate ([0, sign * self.base / 2.0, 0])
-               (c)) for sign in [1, -1]]
+        lm8uu_seat_r = Lm8uu.r_o + self.lm8uu_clr
+        c = (rotate ([0, 90, 0])
+              (cylinder (r = lm8uu_seat_r, h = self.l + 1,
+                         center=True, segments = 32)))
+
+        # Seat "cap". 45deg overhang hack.
+        xc = (rotate ([45, 0, 0])
+              (cube ([self.l + 1, lm8uu_seat_r * 2, lm8uu_seat_r * 2], center=True)))
+        xc -= (up (lm8uu_seat_r*3 + 0.5)
+               (cube ([self.l + 2, lm8uu_seat_r * 4, lm8uu_seat_r * 4], center=True)))
+        
+        xc -= (up (-lm8uu_seat_r*2 + lm8uu_seat_r * 0.7071)
+               (cube ([self.l + 2, lm8uu_seat_r * 4, lm8uu_seat_r * 4], center=True)))
+
+        for sign in [1, -1]:
+            d -= (translate ([0, sign * self.base / 2.0, -self.base_h])
+                  (c + xc))
 
         # Zip channels
         for sign_x in [1, -1]:
@@ -75,13 +87,16 @@ class Carriage_x (Carriage):
                                   sign_y * self.base / 2.0,
                                   -self.base_h])
                       (self.draw_zip_channel()))
-        
+
+        d = self.belt.draw_len_clr (width=7, length=20, clr=0.3)
+        t_r = self.belt.tooths2r (angle = 90, tooths = 3)
+        d = self.belt.draw_angle_clr (width = 7, r = t_r, angle = 90, clr=0.3)
         # DEB look inside
         if look_inside != False:
             d -= down (50) (back (100) (cube ([100, 200, 100])))
 
         # DEB motor
-        if draw_motor == False:
+        if draw_motor != False:
             d += (translate ([0,
                               -self.w / 2.0 + self.nema17_offset,
                               Nema17.side_size / 2.0])
