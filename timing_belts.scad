@@ -29,32 +29,45 @@ tT5	=2;
 tT10	=3;
 tMXL	=4;
 
-function tooth_to_r(tooths) = tooths*4/(3.14159);
+function tooths2r(a,n) = n*2*180.0/(a*3.1459);
 
-rotate ([0,180,0])
-union ()
+gt2_a(tooths2r(90,4),6.6,90,0.2);
+
+module gt2_a(r,w,a,c)
 {
-  for (nn=[0,1])
-    translate([nn * 12,nn * -4,0])
-      rotate([0,0,nn * 180])
+    gt2_belt_angle_clr(r, w, a, c);
+}
+
+
+*union ()
+{
+  translate([12,-3,0])
+  rotate([0,0,180])
     difference ()
     {
-      translate ([-8, -2.2, -3])
-	cube ([18, 10, 10]);
-      translate ([2, 0.5, 0])
+  
+      translate ([-8, -2, -3])
+	cube ([18,8,8]);
       union ()
       {
-	assign (r_tooth = tooth_to_r (3))
-	  {
-	    gt2_belt_angle_clr(r_tooth, 6.6, 90, clr=0.3);
-	    
-	    rotate ([180,0,180])
-	      gt2_belt_len_clr(10, 6.6, clr=0.3);
+	gt2_belt_angle_clr(6, 6.6, 90, clr=0.3);
 
-	    translate ([r_tooth, 10 + r_tooth, 0])
-	      rotate ([180,0,-90])
-	      gt2_belt_len_clr(10, 6.6, clr=0.3);
-	  }
+	rotate ([180,0,180])
+	  gt2_belt_len_clr(10, 6.6, clr=0.3);
+      }
+    }
+
+  difference ()
+    {
+  
+      translate ([-8, -2, -3])
+	cube ([18,8,8]);
+      union ()
+      {
+	gt2_belt_angle_clr(6, 6.6, 90, clr=0.3);
+
+	rotate ([180,0,180])
+	  gt2_belt_len_clr(10, 6.6, clr=0.3);
       }
     }
 }
@@ -67,7 +80,7 @@ module gt2_belt_len_clr(len = 10, belt_width = 6,clr=0.2)
 {
   union ()
   {
-    _belt_len (tGT2_2, len, belt_width, scale=1);
+    _belt_len (tGT2_2, len, belt_width);
     translate ([len / 2, -(bk_thick[tGT2_2] + clr)/2 , 0])
       cube ([len, bk_thick[tGT2_2] + clr, belt_width], center=true);
   }
@@ -159,17 +172,14 @@ module p_slice(radius, angle,height,back_t=0.6) {
 	}
 }
 
-dp=5;
-
-module belt_angle(prf = tT2_5, rad=25, bwdth = 6, angle=90, fn=128, tooth_scale=1)
+module belt_angle(prf = tT2_5, rad=25, bwdth = 6, angle=90, fn=128)
 {
   av=360/2/rad/3.14159*tpitch[prf];
-  bk=bk_thick[prf] * tooth_scale;
+  bk=bk_thick[prf];
 
   nn=ceil(angle/av);
   ang=av*nn;
   intersection(){
-    scale ([tooth_scale,tooth_scale,1])
     p_slice(rad,angle,bwdth,bk_thick[prf]);
     union ()
     {
@@ -178,7 +188,6 @@ module belt_angle(prf = tT2_5, rad=25, bwdth = 6, angle=90, fn=128, tooth_scale=
 	  translate ([0,rad,-bwdth/2])
 	    rotate ([0,0,av*i])
 	    translate ([0,-rad,0])
-	    scale ([tooth_scale,tooth_scale,1])
 	    draw_tooth(prf,0,bwdth);
 	}
       translate ([0,rad,-bwdth/2])
@@ -198,7 +207,7 @@ module belt_len(profile = tT2_5, belt_width = 6, len = 10){
 }
 
 //inner module
-module _belt_len(prf = -1, len = 10, bwdth = 5, tooth_scale=1)
+module _belt_len(prf = -1, len = 10, bwdth = 5)
 {
   n=ceil(len/tpitch[prf]);
 
@@ -210,15 +219,12 @@ module _belt_len(prf = -1, len = 10, bwdth = 5, tooth_scale=1)
 	for( i = [0:n])
 	  {
             translate([tpitch[prf]*i,0,0])
-              scale ([tooth_scale, tooth_scale, 1])
 	      draw_tooth(prf, 0, bwdth);
 	  }
 	translate([-1,-bk_thick[prf],0])
-	  scale ([tooth_scale, tooth_scale, 1])
 	  cube([len+1,bk_thick[prf],bwdth]);
       }
       translate([0,-bk_thick[prf],0])
-	scale ([tooth_scale, tooth_scale, 1])
 	cube([len,max_h[prf]+bk_thick[prf],bwdth]);
     }
 }
