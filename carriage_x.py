@@ -22,20 +22,26 @@ from parts import Idler_pulley
 use ("timing_belts.scad")
 
 class Carriage_x (Carriage):
-    nema17_offset = 3.0         # aprox. offset center of gravity
-    nema17_plate_thickness = 3.0
-    lm8uu_clr = 0.1
-    nema17_clr = 0.5 # clearence between motor and carriage walls (GT2 traps)
-    belt_trap_w = 10
-    l = int(Nema17.side_size) + nema17_clr * 2 + belt_trap_w * 2
-    base = 30                   # distance between X rods
-    w = base + (Lm8uu.r_o + 2) * 2
+    nema17_offset = 3.0  # motor offset from base edge
+    lm8uu_clr = 0.1      # LM8UU seat clearance
+    belt_clr = 0.3       # Belt traps clearance
+    belt_wall = 1.5      # plastic wall thickness for upper belt traps
+    nema17_clr = 0.5     # clearance between motor and carriage walls (GT2 traps)
+    belt_trap_w = 10     # Width of upper belt traps
+    base = 30            # distance between X rods
 
     def __init__(self, belt_z):
-        """belt_z - distance from center of X rod to belt."""
-        self.belt_z = belt_z
+        """belt_z - distance from center of X rod to lower belt."""
+
+        self.belt_lower_z = belt_z
+        self.belt_upper_z = (belt_z + Belt.width
+                             + Const_size.m3_washer_h + Idler_pulley.flange_h)
+        
         self.base_h = Belt.width + 5
         self.h = self.base_h + Belt.width
+        self.l = int(Nema17.side_size) + self.nema17_clr * 2 + self.belt_trap_w * 2
+        self.w = self.base + (Lm8uu.r_o + 2) * 2
+
         self.belt = Belt()
         
 
@@ -50,10 +56,13 @@ class Carriage_x (Carriage):
         return z
         
     def draw_belt_trap(self):
-        belt_trap_l = self.w / 2 - Idler_pulley.r_w + Const_size.rod_wall
-        d = (translate ([0, self.w / 2.0 - belt_trap_l , -1])
-             (cube ([self.belt_trap_w, belt_trap_l, Belt.width + 1])))
-        return d
+        trap_h = self.belt_upper_z - self.base_h + Belt.width
+        trap_l = self.w / 2 - Idler_pulley.r_w + Const_size.rod_wall
+        trap = (translate ([0, self.w / 2.0 - trap_l , -1])
+             (cube ([self.belt_trap_w, trap_l, trap_h])))
+        belt_r = self.belt.tooths2r (angle = 90, tooths = 3)
+        
+        return trap
 
     def draw (self, draw_support = False, draw_motor=False, look_inside=False):
         # base plate
@@ -88,9 +97,22 @@ class Carriage_x (Carriage):
                                   -self.base_h])
                       (self.draw_zip_channel()))
 
-        d = self.belt.draw_len_clr (width=7, length=20, clr=0.3)
-        t_r = self.belt.tooths2r (angle = 90, tooths = 3)
-        d = self.belt.draw_angle_clr (width = 7, r = t_r, angle = 90, clr=0.3)
+        #t_r = self.belt.tooths2r (angle = 90, tooths = 3)
+        #d = self.belt.draw_angle_clr (width = 7, r = t_r, angle = 91, clr=0.3)
+
+        # Lower belt traps.
+        belt = self.belt.draw_len_clr (width = self.base_h - self.belt_lower_z + 1,
+                                       length=20, clr=0.3)
+
+        for a in [0, 180]:
+            d -= (rotate ([0, 0, a])
+                  (translate ([-self.l / 2.0 - 1,
+                               Idler_pulley.r_w,
+                               -self.base_h + self.belt_lower_z - 0.5])
+                   (rotate ([0, 0, -15])
+                    (belt))))
+        
+        
         # DEB look inside
         if look_inside != False:
             d -= down (50) (back (100) (cube ([100, 200, 100])))

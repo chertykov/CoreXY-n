@@ -5,11 +5,33 @@ import math
 from solid import *
 from solid.utils import * # Not required, but the utils module is useful
 
+use ("timing_belts.scad")
+
+class Belt:
+    """GT2 belt."""
+    width = 6.0
+    thickness = 0.6 * 2
+    pitch = 2.0
+
+    def tooths2r(self, angle=90, tooths=6):
+        return (tooths * self.pitch * 180.0) / (angle * math.pi);
+
+    def draw_angle_clr(self, width = 6, r = 10, angle = 45, clr = 0):
+        return (translate ([0, self.thickness / 2.0 + clr, width / 2.0])
+                (gt2_a (r, width, angle, clr)))
+        
+    def draw_len_clr(self, width = 6, length = 10, clr = 0):
+        return (translate ([0, self.thickness / 2.0 + clr, width / 2.0])
+                (gt2_belt_len_clr (length, width, clr)))
+        
+"""        
 class Belt:        
     h = 6.0                  # GT2 belt height
     w = 1.5
     clr = 0.2
     double_w = 2.5
+"""
+
 
 class Toothed_pulley:
     r_o = 9.8
@@ -87,11 +109,11 @@ class Const_size:
     support_brim_height = 0.2
 
     belt_z_axis = 0               # Z offset of both belts axis
-    belt_upper_axis = belt_z_axis - (Belt.h + m3_washer_h) / 2.0 - Idler_pulley.flange_h
-    belt_lower_axis = belt_z_axis + (Belt.h + m3_washer_h) / 2.0 + Idler_pulley.flange_h
-    belt_y_axis = Belt.w / 2 + Idler_pulley.r_w
+    belt_upper_axis = belt_z_axis - (Belt.width + m3_washer_h) / 2.0 - Idler_pulley.flange_h
+    belt_lower_axis = belt_z_axis + (Belt.width + m3_washer_h) / 2.0 + Idler_pulley.flange_h
+    belt_y_axis = Belt.thickness / 2 + Idler_pulley.r_w
 
-    motor_dx = Lm8uu.r_o + 1 + Belt.h / 2 + Toothed_pulley.belt_r_o
+    motor_dx = Lm8uu.r_o + 1 + Belt.width / 2 + Toothed_pulley.belt_r_o
     
 
     
@@ -138,27 +160,6 @@ class Bearing:
         d -= cylinder (d = self.d_i, h = self.h + 1, center=True)
         return d
 
-
-use ("timing_belts.scad")
-
-class Belt:
-    """GT2 belt."""
-    width = 6.0
-    thickness = 0.6 * 2
-    pitch = 2.0
-
-    def tooths2r(self, angle=90, tooths=6):
-        return (tooths * self.pitch * 180.0) / (angle * math.pi);
-
-    def draw_angle_clr(self, width = 6, r = 10, angle = 45, clr = 0):
-        return (translate ([0, self.thickness / 2.0 + clr, width / 2.0])
-                (gt2_a (r, width, angle, clr)))
-        
-    def draw_len_clr(self, width = 6, length = 10, clr = 0):
-        return (translate ([0, self.thickness / 2.0 + clr, width / 2.0])
-                (gt2_belt_len_clr (length, width, clr)))
-        
-        
 
 class Mk8_gear:
     h = 11.0
