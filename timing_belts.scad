@@ -39,37 +39,32 @@ module gt2_a(r,w,a,c)
 }
 
 
-*union ()
+rotate ([0,180,0])
+union ()
 {
-  translate([12,-3,0])
-  rotate([0,0,180])
-    difference ()
-    {
-  
-      translate ([-8, -2, -3])
-	cube ([18,8,8]);
-      union ()
+  for (nn=[0,1])
+    translate([nn * 12,nn * -4,0])
+      rotate([0,0,nn * 180])
+      difference ()
       {
-	gt2_belt_angle_clr(6, 6.6, 90, clr=0.3);
+	translate ([-8, -2.2, -3])
+	  cube ([18, 10, 10]);
+	translate ([2, 0.5, 0])
+	  union ()
+	  {
+	    assign (r_tooth = tooth_to_r (3))
+	      {
+		gt2_belt_angle_clr(r_tooth, 6.6, 90, clr=0.3);
+	    
+		rotate ([180,0,180])
+		  gt2_belt_len_clr(10, 6.6, clr=0.3);
 
-	rotate ([180,0,180])
-	  gt2_belt_len_clr(10, 6.6, clr=0.3);
+		translate ([r_tooth, 10 + r_tooth, 0])
+		  rotate ([180,0,-90])
+		  gt2_belt_len_clr(10, 6.6, clr=0.3);
+	      }
+	  }
       }
-    }
-
-  difference ()
-    {
-  
-      translate ([-8, -2, -3])
-	cube ([18,8,8]);
-      union ()
-      {
-	gt2_belt_angle_clr(6, 6.6, 90, clr=0.3);
-
-	rotate ([180,0,180])
-	  gt2_belt_len_clr(10, 6.6, clr=0.3);
-      }
-    }
 }
 
 
@@ -91,7 +86,7 @@ module gt2_belt_len_clr(len = 10, belt_width = 6,clr=0.2)
 //translate ([20, 0, 0])
 //gt2_belt_angle_clr(10, 6, 60, 0.2);
 
-module gt2_belt_angle_clr(rad=25, bwdth = 6, angle=90, clr)
+module gt2_belt_angle_clr(rad=25, bwdth = 6, angle=90, clr=0)
 {
   union ()
   {
@@ -101,9 +96,9 @@ module gt2_belt_angle_clr(rad=25, bwdth = 6, angle=90, clr)
 	{
 	  difference ()
 	    {
-	      cylinder (r=rad+clr + bk_thick[tGT2_2], h = bwdth, $fn=120);
+	      cylinder (r=rad+clr + bk_thick[tGT2_2], h = bwdth, $fn=64);
 	      translate ([0,0,-1])
-		cylinder (r=rad + bk_thick[tGT2_2]-0.1, h = bwdth+2, $fn=120);
+		cylinder (r=rad + bk_thick[tGT2_2]-0.1, h = bwdth+2, $fn=64);
 	    }
 	  translate ([0,0,-1])
 	    rotate(-90)
@@ -172,7 +167,7 @@ module p_slice(radius, angle,height,back_t=0.6) {
 	}
 }
 
-module belt_angle(prf = tT2_5, rad=25, bwdth = 6, angle=90, fn=128)
+module belt_angle(prf = tT2_5, rad=25, bwdth = 6, angle=90, fn=64)
 {
   av=360/2/rad/3.14159*tpitch[prf];
   bk=bk_thick[prf];

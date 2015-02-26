@@ -54,22 +54,44 @@ class Carriage_x (Carriage):
         z -= cylinder(r = zip_r_i, h = zip_w + 1, center=True)
         z = rotate ([0, 90, 0]) (z)
         return z
+
+    def draw_upper_belt_trap(self):
+        belt_r = self.belt.tooths2r (angle = 90, tooths = 3)
+        belt_ro = belt_r + self.belt_clr + self.belt.thickness / 2.0
+        belt_l = 12
+        belt_x = self.belt.draw_len_clr (width = self.base_h - self.belt_lower_z + 1,
+                                         length = belt_l, clr=self.belt_clr)
+        belt_a = self.belt.draw_angle_clr (width = 7, r = belt_r, angle = 91,
+                                      clr = self.belt_clr)
+
+        belt_a = (forward (belt_ro+0.04)
+                  (left (belt_ro)
+                   (rotate ([0, 0, -90.5])
+                    (belt_a))))
+        belt_x1 = (forward (belt_l + belt_ro)
+                   (left (belt_ro)
+                    (rotate ([0, 0, -90])
+                     (belt_x))))
+        
+        return right (belt_ro) (belt_x + belt_a + belt_x1)
+
         
     def draw_belt_trap(self):
-        trap_h = self.belt_upper_z - self.base_h + Belt.width
+        trap_h = self.belt_upper_z - self.base_h + Belt.width + 1
         trap_l = self.w / 2 - Idler_pulley.r_w + Const_size.rod_wall
-        trap = (translate ([0, self.w / 2.0 - trap_l , -1])
-             (cube ([self.belt_trap_w, trap_l, trap_h])))
-        belt_r = self.belt.tooths2r (angle = 90, tooths = 3)
-        
+        trap = (translate ([0, self.w / 2.0 - trap_l, -1])
+                (cube ([self.belt_trap_w, trap_l, trap_h])))
         return trap
 
-    def draw (self, draw_support = False, draw_motor=False, look_inside=False):
-        # base plate
+    def draw (self, print_=False, draw_motor=False, look_inside=False):
+        # Base plate.
         d = down(self.base_h / 2.0) (cube([self.l, self.w, self.base_h], center=True))
-        d += [(rotate ([0, 0, i])
-              (translate ([self.l / 2.0 - self.belt_trap_w, 0 ,0])
-              (self.draw_belt_trap()))) for i in [0,180]]
+        # Upper belt trap body. x 2
+        belt_trap_x = self.l / 2.0 - self.belt_trap_w
+        for i in [0,180]:
+            d += (rotate ([0, 0, i])
+                  (translate ([belt_trap_x, 0 ,0])
+                   (self.draw_belt_trap())))
         # LM8UU seats
         lm8uu_seat_r = Lm8uu.r_o + self.lm8uu_clr
         c = (rotate ([0, 90, 0])
@@ -111,8 +133,17 @@ class Carriage_x (Carriage):
                                -self.base_h + self.belt_lower_z - 0.5])
                    (rotate ([0, 0, -15])
                     (belt))))
-        
-        
+
+        # Upper belt traps.
+        belt = (translate ([belt_trap_x + self.belt_wall,
+                           Idler_pulley.r_w,
+                           -self.base_h + self.belt_upper_z - 0.5])
+                (self.draw_upper_belt_trap()))
+
+        if print_:
+            for a in [0, 180]:
+                d -= rotate ([0, 0, a]) (belt)
+
         # DEB look inside
         if look_inside != False:
             d -= down (50) (back (100) (cube ([100, 200, 100])))
@@ -134,6 +165,6 @@ class Carriage_x (Carriage):
 
 if __name__ == "__main__":        
     car = Carriage_x (belt_z = 5)
-    draw = car.draw (draw_support=False, look_inside=False)
+    draw = car.draw (print_=False, look_inside=False)
     car.report()
     print scad_render(draw)
