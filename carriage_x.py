@@ -29,18 +29,22 @@ class Carriage_x (Carriage):
     nema17_clr = 0.5     # clearance between motor and carriage walls (GT2 traps)
     belt_trap_w = 10     # Width of upper belt traps
     base = 30            # distance between X rods
-
+    stepper_mount_w = 3
+    
     def __init__(self, belt_z):
         """belt_z - distance from center of X rod to lower belt."""
 
         self.belt_lower_z = belt_z
         self.belt_upper_z = (belt_z + Belt.width
-                             + Const_size.m3_washer_h + Idler_pulley.flange_h)
+                             + Const_size.m3_washer_h + Idler_pulley.flange_h * 2)
         
-        self.base_h = Belt.width + 5
+        self.base_h = Belt.width + 6
         self.h = self.base_h + Belt.width
         self.l = int(Nema17.side_size) + self.nema17_clr * 2 + self.belt_trap_w * 2
         self.w = self.base + (Lm8uu.r_o + 2) * 2
+
+        self.stepper_mount_h = Nema17.side_size / 2.0 - Nema17.round_extrusion_r - 0.2
+
 
         self.belt = Belt()
         
@@ -92,6 +96,27 @@ class Carriage_x (Carriage):
             d += (rotate ([0, 0, i])
                   (translate ([belt_trap_x, 0 ,0])
                    (self.draw_belt_trap())))
+        # Stepper mount
+        xmount_h = self.belt_upper_z - self.base_h + Belt.width + 1
+        xmount = (translate ([self.l / 2.0 - self.belt_trap_w, -self.w / 2.0, -1])
+                  (cube ([self.belt_trap_w, self.belt_trap_w, xmount_h])))
+        
+        mount = cube ([self.l, self.stepper_mount_w, self.stepper_mount_h + 1])
+        mount = (translate ([-self.l / 2.0,
+                             -self.stepper_mount_w - self.w / 2.0 + self.nema17_offset,
+                             -1])
+                 (mount))
+        d += mount + xmount
+        # Stepper mount holes
+        hole = (rotate ([90, 0, 0])
+                 (cylinder (r = Const_size.m3_r, h = self.w * 2, center = True, segments=16)))
+        for sign in [1, -1]:
+            d -= (translate ([sign * Nema17.mount_dist / 2.0,
+                            0,
+                            Nema17.side_size / 2.0 - Nema17.mount_dist / 2.0])
+                  (hole))
+        
+        
         # LM8UU seats
         lm8uu_seat_r = Lm8uu.r_o + self.lm8uu_clr
         c = (rotate ([0, 90, 0])
@@ -118,9 +143,6 @@ class Carriage_x (Carriage):
                                   sign_y * self.base / 2.0,
                                   -self.base_h])
                       (self.draw_zip_channel()))
-
-        #t_r = self.belt.tooths2r (angle = 90, tooths = 3)
-        #d = self.belt.draw_angle_clr (width = 7, r = t_r, angle = 91, clr=0.3)
 
         # Lower belt traps.
         belt = self.belt.draw_len_clr (width = self.base_h - self.belt_lower_z + 1,
@@ -165,6 +187,6 @@ class Carriage_x (Carriage):
 
 if __name__ == "__main__":        
     car = Carriage_x (belt_z = 5)
-    draw = car.draw (print_=False, look_inside=False)
+    draw = car.draw (print_=True, look_inside=False)
     car.report()
     print scad_render(draw)
