@@ -335,6 +335,14 @@ nema_mount.mesh = function () {
 
 function main (parameters) {
     params = parameters;
+
+    // Convert parameters to numbers
+    params.fn = +params.fn;
+    params.box_wall = +params.box_wall;
+    params.xy_rods_d = +params.xy_rods_d;
+    params.z_rods_d = +params.z_rods_d;
+    
+    
     CSG.defaultResolution2D = params.fn;
     FN = params.fn;
 
