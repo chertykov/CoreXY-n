@@ -108,7 +108,8 @@ var Size = {
         dist.y.idler1_idler2 = dist.y.belt_offset - idler.r_i * 2; // Y distance between idlers.
 
         // Z distance from base (motor mount surface).
-        this.belt_offset_z = idler bearing flange_h + idler shaft washer_h
+//        this.belt_offset_z = idler bearing flange_h + idler shaft washer_h
+        this.belt_offset_z = 1 + 1 + 1; // TODO M5 washer + bearing flange
         this.belt_high_h = this.belt_low.h + this.belt_offset_z;
 
         
@@ -335,7 +336,7 @@ nema_mount.mesh = function () {
 
     return union (
         // base
-        cube ([Size.rod_y_wall_dist, size_y, this.thickness + 2]),
+        cube ([Size.rod_y_wall_dx, size_y, this.thickness + 2]),
         // wall support
         color ("red", cube ([this.thickness_x, size_y, this.wall_trap_h])),
         //top fix
