@@ -155,31 +155,53 @@ function getParameterDefinitions() {
                        "Carriage X",           // 12
                       ]
         },
-        { name: 'fn', caption: 'output resolution (16, 24, 32)', type: 'int', initial: 8 },   
-        
-        { name: 'print_width', caption: 'Print width:', type: 'int', initial: 200 },
-        { name: 'print_height', caption: 'Print height :', type: 'int', initial: 150 },
-        { name: 'print_depth', caption: 'Print depth :', type: 'int', initial: 200 },
         {
+            name: 'fn',
+            caption: 'output resolution (16, 24, 32)',
+            type: 'int',
+            initial: 8
+        },
+        {
+            name: 'arrea',
+            caption: 'Print arrea (x,y,z):',
+            type: 'text',
+            initial: '200,200,150'
+        },
+        {
+            name: 'position',
             caption: 'Position (x,y,z):',
-            name: '_position',
             type: 'text',
             initial: '20,0,0'
         },
-        { name: 'box_wall', caption: 'Box wood thickness:', type: 'int', initial: 10 },
-        { name: 'xy_rods_d', caption: 'X Y Rods diameter (6 or 8 ):', type: 'int', initial: 8},
-        { name: 'z_rods_d', caption: 'Z Rods diameter (6,8,10,12):', type: 'int', initial: 8},
         {
-            caption: 'Z threaded rods:',
+            name: 'box_wall',
+            caption: 'Box wood thickness:',
+            type: 'int',
+            initial: 10
+        },
+        {
+            name: 'xy_rods_d',
+            caption: 'X Y Rods diameter (6 or 8 ):',
+            type: 'int',
+            initial: 8
+        },
+        {
+            name: 'z_rods_d',
+            caption: 'Z Rods diameter (6,8,10,12):',
+            type: 'int',
+            initial: 8
+        },
+        {
             name: 'z_rods_option',
+            caption: 'Z threaded rods:',
             type: 'choice',
             initial: 0,
             values:[0,1,2],
             captions: ["false", "true", "true-2sides"]
         },        
         {
-            caption: 'Motor size',
             name: 'nema_size', 
+            caption: 'Motor size',
             type: 'choice',
             values: ["nema14","nema17"],
             captions: ["nema14","nema17"],
@@ -332,6 +354,20 @@ nema_mount.mesh = function () {
 
 
 
+// Convert comma separated numbers to array.
+// It's used for parsing X,Y,Z parameters.
+
+function read_nums(s) {
+    // Split it up into numbers and spaces
+    var array = s.split(/(\d+)/);
+
+    // Keep just the numbers
+    array = array.filter(function(i) {return "" + +i == i});
+
+    // Convert back to a number
+    array = array.map(function(i) {return +i});
+    return array; 
+}
 
 function main (parameters) {
     params = parameters;
@@ -341,7 +377,17 @@ function main (parameters) {
     params.box_wall = +params.box_wall;
     params.xy_rods_d = +params.xy_rods_d;
     params.z_rods_d = +params.z_rods_d;
-    
+    // Parse head position.
+    var pos = read_nums (params.position);
+    if (pos.length > 0) params.pos_x = pos[0];
+    if (pos.length > 1) params.pos_y = pos[1];
+    if (pos.length > 2) params.pos_z = pos[2];
+    // Parse printable arrea.
+    var arr = read_nums (params.arrea);
+    if (arr.length > 0) params.arrea_x = pos[0];
+    if (arr.length > 1) params.arrea_y = pos[1];
+    if (arr.length > 2) params.arrea_z = pos[2];
+
     
     CSG.defaultResolution2D = params.fn;
     FN = params.fn;
