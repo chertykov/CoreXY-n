@@ -5,6 +5,12 @@ var FN;                            // global resolution
 var nema;                          // nema object. 14 or 17
 
 
+// TODO remova all this vars.
+var _rod_x_length = 300; // will be calculated in main from parameters.
+var _rod_y_length = 300; // will be calculated in main from parameters.
+var _rod_z_length = 300; // will be calculated in main from parameters.
+
+
 // Different constant dimentions.
 
 // Variable suffixes:
@@ -29,15 +35,23 @@ var Size = {
         head_r: 5.7 / 2,         // real 5.4
         head_h: 3
     },
-    
     m4: {
         wall: 3,                 // plastic wall for m3 screw support
-        r: 4.4 / 2.0,            // M3 screw hole radius
+        r: 4.4 / 2.0,            // M4 screw hole radius
         screw_r: 4.1 / 2.0,      // Screw without nut. Tight. Self tap.
         washer_h: 0.8,           //
         washer_r_o: 9.4 / 2,
-        head_r: 7.3 / 2,         // real 5.4
+        head_r: 7.3 / 2,         //  max 7.22 min 6.78
         head_h: 4
+    },
+    m5: {
+        wall: 3,                // plastic wall for m3 screw support
+        r: 5.3 / 2.0,           // M5 screw hole radius
+        screw_r: 5 / 2.0,       // Screw without nut. Tight. Self tap.
+        washer_h: 1,            //
+        washer_r_o: 10 / 2,
+        head_r: 8.72 / 2,       // max 8.72 min 8.28
+        head_h: 5
     },
     rod_wall: 3,
     rod_x: {},
@@ -47,38 +61,42 @@ var Size = {
     lmuu_y: {},
     lmuu_z: {},
 
-    rod_y_wall_dist: 20,        // distance from wall to Y rod axis
+    // Belts 
+    belt_low_h: 4,             // belt height above gantry base (motor mount surface).
+
+    rod_y_wall_dx: 20,        // X distance from wall to Y rod axis
     
     calc: function () {
-        this.rod_x.d = rod_x_d;
-        this.x.rod.r = _XYrodsDiam / 2;
-        this.x.rod.l =  XrodLength;
+        this.rod_x_d = params.xy_rods_d;
+        this.rod_x_r = params.xy_rods_d / 2;
+        this.rod_x_l = _rod_x_length;
+
+        this.rod_y_d = params.xy_rods_d;
+        this.rod_y_r = params.xy_rods_d / 2;
+        this.rod_y_l = _rod_y_length;
+
+        this.rod_z_d = params.z_rods_d;
+        this.rod_z_r = params.z_rods_d / 2;
+        this.rod_z_l = _rod_z_length;
+
         
-        this.y.rod.d = _XYrodsDiam;
-        this.y.rod.r = _XYrodsDiam / 2;
-        this.y.rod.l =  YrodLength;
-        
-        this.z.rod.d = _ZrodsDiam;
-        this.z.rod.r = _ZrodsDiam / 2;
-        this.z.rod.l =  ZrodLength;
-        
-        if (_XYrodsDiam == 6) {
-            this.x.lmuu = lm6uu;
-            this.y.lmuu = lm6uu;
+        if (params.xy_rods_d == 6) {
+            this.lmuu_x = lm6uu;
+            this.lmuu_y = lm6uu;
         }
-        if (_XYrodsDiam == 8) {
-            this.x.lmuu = lm8uu;
-            this.y.lmuu = lm8uu;
+        if (params.xy_rods_d == 8) {
+            this.lmuu_x = lm8uu;
+            this.lmuu_y = lm8uu;
         }
-        if (_XYrodsDiam == 10) {
-            this.x.lmuu = lm10uu;
-            this.y.lmuu = lm10uu;
+        if (params.xy_rods_d == 10) {
+            this.lmuu_x = lm10uu;
+            this.lmuu_y = lm10uu;
         }
         
-        if (_ZrodsDiam == 6) this.z.lmuu = lm6uu;
-        if (_ZrodsDiam == 8) this.z.lmuu = lm8uu;
-        if (_ZrodsDiam == 10) this.z.lmuu = lm10uu;
-        if (_ZrodsDiam == 12) this.z.lmuu = lm12uu;
+        if (params.z_rods_d == 6) this.lmuu_z = lm6uu;
+        if (params.z_rods_d == 8) this.lmuu_z = lm8uu;
+        if (params.z_rods_d == 10) this.lmuu_z = lm10uu;
+        if (params.z_rods_d == 12) this.lmuu_z = lm12uu;
 
         // Distances calculation
         // X distances
@@ -89,7 +107,11 @@ var Size = {
         dist.y.belt_offset = 22;  // Diameter of 608 bearing.
         dist.y.idler1_idler2 = dist.y.belt_offset - idler.r_i * 2; // Y distance between idlers.
 
-        // Z distance form base (motor mount surface).
+        // Z distance from base (motor mount surface).
+        this.belt_offset_z = idler bearing flange_h + idler shaft washer_h
+        this.belt_high_h = this.belt_low.h + this.belt_offset_z;
+
+        
         dist.z.rod_y = Size.y.rod.r;
         dist.z.belt_offset = 3;               // Z distance from belt1 to belt2
         dist.z.belt1 = Size.rod_xy_wall + 0.2 + Size.y.rod.d + 2;
@@ -145,7 +167,7 @@ function getParameterDefinitions() {
             initial: '20,0,0'
         },
         { name: 'box_wall', caption: 'Box wood thickness:', type: 'int', initial: 10 },
-        { name: 'xy_rod_d', caption: 'X Y Rods diameter (6 or 8 ):', type: 'int', initial: 8},
+        { name: 'xy_rods_d', caption: 'X Y Rods diameter (6 or 8 ):', type: 'int', initial: 8},
         { name: 'z_rods_d', caption: 'Z Rods diameter (6,8,10,12):', type: 'int', initial: 8},
         {
             caption: 'Z threaded rods:',
