@@ -3,12 +3,109 @@
 var params;                        // parameter definitions.
 var FN;                            // global resolution
 var nema;                          // nema object. 14 or 17
+var idler;                         // idler object (initialized in main)
 
-
-// TODO remova all this vars.
+// TODO remove all this vars.
 var _rod_x_length = 300; // will be calculated in main from parameters.
 var _rod_y_length = 300; // will be calculated in main from parameters.
 var _rod_z_length = 300; // will be calculated in main from parameters.
+
+
+function getParameterDefinitions() {
+    return [
+        {name: 'version', caption: 'Version', type: 'text', initial: "0.0"},
+        { 
+            name: 'output', 
+            caption: 'What to show :', 
+            type: 'choice', 
+            values: [0, 1, 2, 3, 4, 5, -1, 6, 7, 8, 9, 10, 11, 12], 
+            initial: 3,
+            captions: ["-----",                // 0
+                       "All printer assembly", // 1
+                       "Assembly, no walls",   // 2
+                       "Gantry assembly",      // 3
+                       "parts only",           // 4
+                       "Walls and rods sizes", // 5
+                       "-----",                // nope
+                       "Motor mount",          // 6
+                       "Idler mount",          // 7
+                       "Carriage Y",           // 8
+                       "Z top",                // 9
+                       "Z bottom",             // 10
+                       "Z slide",              // 11
+                       "Carriage X",           // 12
+                      ]
+        },
+        {
+            name: 'debug',
+            caption: 'Look inside (debug)',
+            type: 'choice',
+            values: [0, 1],
+            initial: 1,
+            captions: ["No", "Yes"]
+        },
+        {
+            name: 'fn',
+            caption: 'output resolution (16, 24, 32)',
+            type: 'int',
+            initial: 8
+        },
+        {
+            name: 'area',
+            caption: 'Print area (x,y,z):',
+            type: 'text',
+            initial: '200,200,150'
+        },
+        {
+            name: 'position',
+            caption: 'Position (x,y,z):',
+            type: 'text',
+            initial: '20,0,0'
+        },
+        {
+            name: 'box_wall',
+            caption: 'Box wood thickness:',
+            type: 'int',
+            initial: 10
+        },        
+        {
+            name: 'idler',
+            caption: 'Idler bearing',
+            type: 'choice',
+            values: ["3x10x4", "4x10x4", "5x10x4", "608"],
+            initial: "5x10x4",
+            captions: ["3x10x4", "4x10x4", "5x10x4", "608"]
+        },
+        {
+            name: 'xy_rods_d',
+            caption: 'X Y Rods diameter (6 or 8 ):',
+            type: 'int',
+            initial: 8
+        },
+        {
+            name: 'z_rods_d',
+            caption: 'Z Rods diameter (6,8,10,12):',
+            type: 'int',
+            initial: 8
+        },
+        {
+            name: 'z_rods_option',
+            caption: 'Z threaded rods:',
+            type: 'choice',
+            initial: 0,
+            values:[0,1,2],
+            captions: ["false", "true", "true-2sides"]
+        },        
+        {
+            name: 'nema_size', 
+            caption: 'Motor size',
+            type: 'choice',
+            values: ["nema14","nema17"],
+            captions: ["nema14","nema17"],
+            initial: "nema17"
+        }
+    ]; 
+}
 
 
 // Different constant dimentions.
@@ -61,11 +158,13 @@ var Size = {
     lmuu_y: {},
     lmuu_z: {},
 
+    rod_x_base_dy: 30,          // Base distance between two X rods.
     // Belts 
-    belt_low_h: 4,             // belt height above gantry base (motor mount surface).
+    belt1_dz: 4, // belt height above gantry base (motor mount surface).
 
-    rod_y_wall_dx: 20,        // X distance from wall to Y rod axis
-    
+    idler_support_h: 0.4,       // Height of builtin washer
+    lmuu_fix_plate: 6,          // Width of LM_UU fix plate for M3 screws.
+
     calc: function () {
         this.rod_x_d = params.xy_rods_d;
         this.rod_x_r = params.xy_rods_d / 2;
@@ -100,125 +199,137 @@ var Size = {
 
         // Distances calculation
         // X distances
-        dist.x.wall_belt_outer = nema.side_size / 2 + Size.gt2_pulley.belt_ro;
-        dist.x.wall_belt_inner = dist.x.wall_belt_outer.belt_ro - belt.thickness;
-        dist.x.rod_y_idler_axis = dist.x.wall_belt_outer + idler.r_w - Size.rod_y_wall_dist;
 
-        dist.y.belt_offset = 22;  // Diameter of 608 bearing.
-        dist.y.idler1_idler2 = dist.y.belt_offset - idler.r_i * 2; // Y distance between idlers.
+        // X distance from wall to Y rod axis
+        this.rod_y_wall_dx = 2 + this.lmuu_y.ro;
+        this.wall_belt_outer_dx = nema.side_size / 2 + gt2_pulley.belt_ro;
+        this.wall_belt_inner_dx = this.wall_belt_outer_dx - belt.thickness;
+        this.rod_y_car_idler_dx = this.wall_belt_outer_dx + idler.r_w - this.rod_y_wall_dx;
+        
 
         // Z distance from base (motor mount surface).
-//        this.belt_offset_z = idler bearing flange_h + idler shaft washer_h
-        this.belt_offset_z = 1 + 1 + 1; // TODO M5 washer + bearing flange
-        this.belt_high_h = this.belt_low.h + this.belt_offset_z;
+        this.belt2_dz = this.belt1_dz + belt.width + idler.belt_offset;
+        this.rod_x_dz = this.belt1_dz - 1 - Size.rod_x_r;
+        this.rod_y_dz = this.rod_x_dz - Size.rod_x_r - Size.lmuu_y.ro;
+        
+        this.idler1_dz = this.belt1_dz - idler.h_f;
+        this.idler2_dz = this.belt2_dz - idler.h_f;
 
-        
-        dist.z.rod_y = Size.y.rod.r;
-        dist.z.belt_offset = 3;               // Z distance from belt1 to belt2
-        dist.z.belt1 = Size.rod_xy_wall + 0.2 + Size.y.rod.d + 2;
-        dist.z.belt2 = dist.z.belt1 + belt.width + dist.z.belt_offset;
-        dist.z.idler1 = dist.z.belt1 - idler.h_f;
-        dist.z.idler2 = dist.z.belt2 - idler.h_f;
-        dist.z.idler1_slot = dist.z.idler1 - Size.idler_support_h;
-        dist.z.idler2_slot = dist.z.idler2 - Size.idler_support_h;
-        dist.z.idler_slot_size = idler.h + Size.idler_support_h * 2;
-        dist.z.rod_x1_rod_x2 = 18;
-        dist.z.rod_x1 = 5 + Size.x.rod.r;
-        dist.z.rod_x2 = dist.z.rod_x1 + dist.z.rod_x1_rod_x2;
-        
+        this.idler1_slot_dz = this.idler1_dz - Size.idler_support_h;
+        this.idler2_slot_dz = this.idler2_dz - Size.idler_support_h;
+        this.idler_slot_size_dz = idler.h + Size.idler_support_h + idler.shaft.washer_h;
+
+        // Calculate printer size inside box.
+        // TODO need precise calculation.
+        this.size_x = params.area_x + 3 * nema.side_size;
+        this.size_y = params.area_y + 3 * nema.side_size;
+        this.size_z = params.area_z + 4 * nema.side_size;
     }
-
 };
 
 
-function getParameterDefinitions() {
-    return [
-        {name: 'version', caption: 'Version', type: 'text', initial: "0.0"},
-        { 
-            name: 'output', 
-            caption: 'What to show :', 
-            type: 'choice', 
-            values: [0, 1, 2, 3, 4, 5, -1, 6, 7, 8, 9, 10, 11, 12], 
-            initial: 0,
-            captions: ["-----",                // 0
-                       "All printer assembly", // 1
-                       "Assembly, no walls",   // 2
-                       "Gantry assembly",      // 3
-                       "parts only",           // 4
-                       "Walls and rods sizes", // 5
-                       "-----",                // nope
-                       "Motor mount",          // 6
-                       "Idler mount",          // 7
-                       "Carriage Y",           // 8
-                       "Z top",                // 9
-                       "Z bottom",             // 10
-                       "Z slide",              // 11
-                       "Carriage X",           // 12
-                      ]
-        },
-        {
-            name: 'fn',
-            caption: 'output resolution (16, 24, 32)',
-            type: 'int',
-            initial: 8
-        },
-        {
-            name: 'arrea',
-            caption: 'Print arrea (x,y,z):',
-            type: 'text',
-            initial: '200,200,150'
-        },
-        {
-            name: 'position',
-            caption: 'Position (x,y,z):',
-            type: 'text',
-            initial: '20,0,0'
-        },
-        {
-            name: 'box_wall',
-            caption: 'Box wood thickness:',
-            type: 'int',
-            initial: 10
-        },
-        {
-            name: 'xy_rods_d',
-            caption: 'X Y Rods diameter (6 or 8 ):',
-            type: 'int',
-            initial: 8
-        },
-        {
-            name: 'z_rods_d',
-            caption: 'Z Rods diameter (6,8,10,12):',
-            type: 'int',
-            initial: 8
-        },
-        {
-            name: 'z_rods_option',
-            caption: 'Z threaded rods:',
-            type: 'choice',
-            initial: 0,
-            values:[0,1,2],
-            captions: ["false", "true", "true-2sides"]
-        },        
-        {
-            name: 'nema_size', 
-            caption: 'Motor size',
-            type: 'choice',
-            values: ["nema14","nema17"],
-            captions: ["nema14","nema17"],
-            initial: "nema17"
-        }
-    ]; 
+var belt = {
+    width: 6,
+    thickness: 1.5,
+    pitch: 2,
+
+    mesh: function (len, round) {
+        var mesh = cube ([len, this.thickness, this.width]);
+        if (round == "back")
+            mesh = mesh.translate ([0, -this.thickness, 0]);
+        return color ([0.2, 0.2, 0.2], mesh);
+    }
+};
+
+var idler3 = new Idler (3, 10, 8, 11.5, 1, 6); // Two 3x10x4 mm flanged bearings
+var idler4 = new Idler (4, 10, 8, 11.65, 0.85, 7); // Two 4x10x4 mm flanged bearings
+var idler5 = new Idler (5, 10, 8, 11.65, 0.85, 8); // Two 5x10x4 mm flanged bearings
+var idler8 = new Idler (8, 22, 7, 22, 0.5, 10);     // One 608 bearing
+
+function Idler (d_i, d_w, h, d_f, h_f, d_s) {
+    this.r_i = d_i / 2;         // bore D
+    this.r_w = d_w / 2;         // working D
+    this.h = h;                 // full height
+    this.r_f = d_f / 2;         // flange D
+    this.h_f = h_f;             // flange height
+    this.r_s = d_s / 2;         // Support (builtin waser) D
+
+    if (d_i == 3) {
+        this.shaft = Size.m3;
+        this.belt_offset = this.shaft.washer_h + h_f * 2;
+    }
+    if (d_i == 4) {
+        this.shaft = Size.m4;
+        this.belt_offset = this.shaft.washer_h + h_f * 2;
+    }
+    if (d_i == 5) {
+        this.shaft = Size.m5;
+        this.belt_offset = this.shaft.washer_h + h_f * 2;
+    }
+    
+    if (d_i == 8) {
+        this.shaft = Size.m8;
+        this.belt_offset = 4;   // TODO correct plastic washer height.
+    }
+
+    this.mesh = function () {
+        var mesh = difference (
+            union (
+                cylinder ({r: this.r_f, h: this.h_f, fn: FN}),
+                cylinder ({r: this.r_w, h: this.h, fn: FN}),
+                cylinder ({r: this.r_f, h: this.h_f, fn: FN})
+                    .translate ([0, 0, this.h - this.h_f])
+            ),
+            cylinder ({r: this.r_i, h: this.h + 2, fn: FN})
+                .translate ([0, 0, -1])
+        );
+        return color ([0.7, 0.7, 0.7], mesh);
+    };
 }
 
 
-var draw_axis = 1;              // DEB.
+function Gt2_Pulley_16 () {
+    this.ri = 5.0 / 2;
+    this.ro = 9.8 / 2;
+    this.belt_ro = 11.2 / 2.0;
+    this.h_base = 6;
+    this.h_work = 7;
+    this.h_flange = 1;
+    this.h = 6 + 7 + 1;
+    
+    this.mesh = function (base) {
+        var mesh =
+            difference (
+                union (
+                    cylinder ({r: 13 / 2, h: this.h_base}),
+                    cylinder ({r: this.ro, h: this.h}),
+                    cylinder ({r: 13 / 2, h: this.h_flange})
+                        .translate ([0, 0, this.h - this.h_flange])
+                ),
+                cylinder ({r: this.ri, h: this.h + 2})
+                    .translate ([0, 0, -1])
+            );
+
+        // Look inside
+        if (params.debug)
+            mesh = mesh.subtract (cube ([40, 40, 40]).rotateZ (180));
+        
+        if (base == "belt")
+            mesh = mesh.translate ([0, 0, -this.h_base]);
+        
+        return mesh.setColor ([0.85, 0.85, 0.85]);
+    };
+}
+
+// TODO Gt2 20 tooths.
+var gt2_pulley = new Gt2_Pulley_16 ();
 
 // Nema 17 x 39 parameters.
 // XXX TODO nema 14
 var nema14 = {
     len: 28.0,              // Motor length [26,28,34]
     side_size: 35.3,        // Motor width
+    half_size: 35.3 / 2,    // Motor width
     body_chamfer: 5.0,      // Motor chamfer
     
     cap_len: 7.0,           // Motor cap length
@@ -236,7 +347,7 @@ var nema14 = {
     mounting_holes_depth: 3.5,  // Mounting hole depth
 
     mesh: function () {
-        return _nema ("base mount");
+        return stepper (this);
     }
 };
 
@@ -244,6 +355,7 @@ var nema14 = {
 var nema17 = {
     len: 39.0,                  // Motor length
     side_size: 42.2,            // Motor width
+    half_size: 42.2 / 2,        // Motor width
     body_chamfer: 5.0,          // Motor chamfer
     
     cap_len: 8.0,               // Motor cap length
@@ -261,25 +373,98 @@ var nema17 = {
     mounting_holes_depth: 4.5,  // Mounting hole depth
 
     mesh: function () {
-        return _nema ("base mount");
+        return stepper (this);
     }
 };
 
-function _nema(base) {
-    var mesh = union (
-        color ("DarkSlateGray",
-               cube ({size: [nema.side_size, nema.side_size, nema.len]})),
-        color ("gray",
-               cylinder ({r: nema.ring_r, h: nema.ring_h, fn: FN})
-               .translate ([nema.side_size / 2, nema.side_size / 2, nema.len])),
-        color ("LightSlateGray",
-               cylinder ({r: nema.shaft_r, h: nema.shaft_h, fn: FN}))
-            .translate ([nema.side_size / 2, nema.side_size / 2, nema.len + nema.ring_h])
-    );
-    if (base && base == "base mount")
-        mesh = mesh.translate ([-nema.side_size / 2, -nema.side_size / 2, -nema.len]);
-    return mesh;
+
+// Nema 17 stepper motor.
+function stepper (nema)
+{
+    var length = nema.len / 2;
+    var width = nema.side_size / 2;
+    var z = width;
+    var ch = sqrt (2.0) * width - sqrt (0.5) * nema.body_chamfer;
+    var ch2 = sqrt (2.0) * width - sqrt (0.5) * nema.cap_chamfer;
+    var depth = nema.mounting_holes_depth;
+    var offset = nema.mount_dist;
+
+    var cube = new CSG.roundedCube ({
+        center: [0, 0, 0],
+        radius: [length - nema.cap_len,
+                 width - nema.cap_thickness,
+                 width - nema.cap_thickness],
+        roundradius: 0.2,
+        resolution: 16
+    });
+    cube = cube.setColor (0.67843137254901960784313725490196,
+                          0.70588235294117647058823529411765,
+                          0.70588235294117647058823529411765);
+    var xcube = new CSG.cube ({
+        center: [0, 0, 0],
+        radius: [length, ch, ch]
+    });
+    xcube = xcube.setColor (0.67843137254901960784313725490196,
+                            0.70588235294117647058823529411765,
+                            0.70588235294117647058823529411765);
+    cube = cube.intersect (xcube.rotateX(45));
+
+    var cube2 = new CSG.roundedCube ({
+        center: [length - (nema.cap_len / 2.0), 0, 0],
+        radius: [(nema.cap_len / 2.0), width, width],
+        roundradius: 0.2,
+        resolution: 16
+    });
+    cube2 = cube2.setColor (0.87058823529411764705882352941176,
+                            0.89803921568627450980392156862745,
+                            0.90588235294117647058823529411765);
+    var cube3 = cube2.translate([-(nema.len - nema.cap_len), 0, 0]);
+    xcube = new CSG.cube ({
+        center: [0, 0, 0],
+        radius: [length, ch2, ch2]
+    });
+    xcube = xcube.setColor (0.87058823529411764705882352941176,
+                            0.89803921568627450980392156862745,
+                            0.90588235294117647058823529411765);
+    xcube = xcube.rotateX(45);
+    cube2 = cube2.intersect (xcube);
+    cube3 = cube3.intersect (xcube);
+
+    var ring = new CSG.cylinder ({
+        start: [length, 0, 0],
+        end: [length + nema.ring_h, 0, 0],
+        radius: nema.ring_r,
+        resolution: FN
+    });
+    ring = ring.setColor (0.81176470588235294117647058823529,
+                          0.84313725490196078431372549019608,
+                          0.85098039215686274509803921568627);
+
+    var shaft = new CSG.cylinder ({
+        start: [length + nema.ring_h, 0, 0],
+        end: [length + nema.ring_h + nema.shaft_h, 0, 0],
+        radius: nema.shaft_r,
+        resolution: FN
+    });
+    shaft = shaft.setColor (0.9, 0.91, 0.91);
+    var motor = cube.union ([cube2, cube3, ring, shaft]);  
+
+    var mountinghole = new CSG.cylinder ({
+        start: [-depth, 0, 0],
+        end: [0, 0, 0],
+        radius: nema.mounting_holes_radius,
+        resolution: FN
+    });
+    mountinghole = mountinghole.setColor (0.2,0.2,0.2);
+    motor = motor.subtract (mountinghole.translate ([length, offset, offset]));
+    motor = motor.subtract (mountinghole.translate ([length, offset, -offset]));
+    motor = motor.subtract (mountinghole.translate ([length, -offset, offset]));
+    motor = motor.subtract (mountinghole.translate ([length, -offset, -offset]));
+
+    return motor.rotateY (-90).translate ([0, 0, -length]);
 }
+
+
 
 
 var Lm_uu = function (dim) {
@@ -349,24 +534,51 @@ nema_mount.mesh = function () {
             .translate([-params.box_wall - this.thickness,
                         0,
                         this.wall_trap_h / 2])
-        
     );
-}
+};
 
+
+function gantry_mesh () {
+    var half_x = Size.size_x / 2;
+    var half_y = Size.size_y / 2;
+
+    var bounds = union (cube ([1, 1, 100]).translate ([half_x, half_y, -20]),
+                        cube ([1, 1, 100]).translate ([-half_x, half_y, -20]),
+                        cube ([1, 1, 100]).translate ([half_x, -half_y, -20]),
+                        cube ([1, 1, 100]).translate ([-half_x, -half_y, -20]));
+    bounds = color ("red", bounds);
+    
+    var motor1 = nema.mesh ()
+        .translate ([-half_x + nema.half_size, -half_y + nema.half_size, 0]);
+    var motor2 = nema.mesh ()
+        .translate ([half_x - nema.half_size, -half_y + nema.half_size, 0]);
+
+    var rod_y1 = cylinder ({r: Size.rod_y_r, h: Size.rod_y_l, fn: FN})
+        .rotateX (-90)
+        .translate ([-half_x + Size.rod_y_wall_dx, -half_y + nema.side_size, Size.rod_y_dz]);
+    rod_y1 = color ("gray", rod_y1);
+
+    var rod_y2 = rod_y1.mirroredX();
+    
+    return union (bounds,
+                  motor1,
+                  motor2,
+                  rod_y1, rod_y2);
+}
 
 
 // Convert comma separated numbers to array.
 // It's used for parsing X,Y,Z parameters.
 
-function read_nums(s) {
+function read_nums (s) {
     // Split it up into numbers and spaces
     var array = s.split(/(\d+)/);
 
     // Keep just the numbers
-    array = array.filter(function(i) {return "" + +i == i});
+    array = array.filter(function(i) {return "" + +i == i;});
 
     // Convert back to a number
-    array = array.map(function(i) {return +i});
+    array = array.map(function(i) {return +i;});
     return array; 
 }
 
@@ -383,12 +595,16 @@ function main (parameters) {
     if (pos.length > 0) params.pos_x = pos[0];
     if (pos.length > 1) params.pos_y = pos[1];
     if (pos.length > 2) params.pos_z = pos[2];
-    // Parse printable arrea.
-    var arr = read_nums (params.arrea);
-    if (arr.length > 0) params.arrea_x = pos[0];
-    if (arr.length > 1) params.arrea_y = pos[1];
-    if (arr.length > 2) params.arrea_z = pos[2];
-
+    // Parse printable area.
+    var area = read_nums (params.area);
+    if (area.length > 0) params.area_x = area[0];
+    if (area.length > 1) params.area_y = area[1];
+    if (area.length > 2) params.area_z = area[2];
+    // Parse Idler
+    if (params.idler == "3x10x4") idler = idler3;
+    if (params.idler == "4x10x4") idler = idler4;
+    if (params.idler == "5x10x4") idler = idler5;
+    if (params.idler == "608") idler = idler8;
     
     CSG.defaultResolution2D = params.fn;
     FN = params.fn;
@@ -398,19 +614,28 @@ function main (parameters) {
     if (params.nema_size == "nema14")
         nema = nema14;
     if (params.nema_size == "nema17")
-        nema = nema14;
+        nema = nema17;
 
+    // Calculate all printer dimensions.
+    Size.calc ();
+    
     switch (+params.output) {
     case 0:                 // Test output
-        mesh.push (nema17.mesh ());
+        if (params.debug)
+            mesh.push (nema.mesh ()
+                       .translate([nema.half_size, nema.half_size, 0]));
         mesh.push (nema_mount.mesh ());
         break;
+    case 3:                     // Gantry assembly
+        mesh.push (gantry_mesh ());
+        break;
     default:
-        mesh.push (cube ([10,10,20]));
+        mesh.push (idler.mesh ());
         break;
     }
-    
-    if (draw_axis) {
+
+    // Draw axis.
+    if (params.debug) {
         var thickness = 0.2;
         var axis = union (
             color ("red", cube ([10, thickness, thickness])),
