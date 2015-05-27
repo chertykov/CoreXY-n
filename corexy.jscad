@@ -503,41 +503,43 @@ var lm12uu = new Lm_uu ({
     l: 57
 });
 
-
-var nema_mount = {
-
-    wall_trap_h: 20,            // height of wall inside support (trap height)
-    thickness: 5,               // thickness of top wall support
-    thickness_x: 9,             // thickness of X wall support
-
-    rod_support_wall: 8,
+var carriage_y = {
     
 };
 
-nema_mount.mesh = function () {
-    var nema_screw_offset = nema.side_size / 2 - nema.mount_dist;
-    var height = this.thickness + this.wall_trap_h;
-    var size_y = nema.side_size + this.rod_support_wall;
+function Nema_mount () {
+    this.wall_trap_h = 20; // height of wall inside support (trap height)
+    this.thickness = 5;    // thickness of top wall support
+    this.thickness_x = 9;  // thickness of X wall support
 
-    return union (
-        // base
-        cube ([Size.rod_y_wall_dx, size_y, this.thickness + 2]),
-        // wall support
-        color ("red", cube ([this.thickness_x, size_y, this.wall_trap_h])),
-        //top fix
-        cube ([params.box_wall + this.thickness_x, size_y, this.thickness])
-            .translate([-params.box_wall, 0, this.wall_trap_h]),
-        // back fix
-        cube ([this.thickness,
-               size_y,
-               this.wall_trap_h / 2  + this.thickness])
-            .translate([-params.box_wall - this.thickness,
-                        0,
-                        this.wall_trap_h / 2])
-    );
-};
+    this.rod_support_wall = 8;  // thickness of Y rod support.
+    this.mesh = function () {
+        var nema_screw_offset = nema.side_size / 2 - nema.mount_dist;
+        var height = this.thickness + this.wall_trap_h;
+        var size_y = nema.side_size + this.rod_support_wall;
 
+        return union (
+            // base
+            cube ([Size.rod_y_wall_dx, size_y, this.thickness + 2]),
+            // wall support
+            color ("red", cube ([this.thickness_x, size_y, this.wall_trap_h])),
+            //top fix
+            cube ([params.box_wall + this.thickness_x, size_y, this.thickness])
+                .translate([-params.box_wall, 0, this.wall_trap_h]),
+            // back fix
+            cube ([this.thickness,
+                   size_y,
+                   this.wall_trap_h / 2  + this.thickness])
+                .translate([-params.box_wall - this.thickness,
+                            0,
+                            this.wall_trap_h / 2])
+        );
+    };
+}
 
+var nema_mount = new Nema_mount ();
+
+// Core XY gantry.
 function gantry_mesh () {
     var half_x = Size.size_x / 2;
     var half_y = Size.size_y / 2;
@@ -547,23 +549,38 @@ function gantry_mesh () {
                         cube ([1, 1, 100]).translate ([half_x, -half_y, -20]),
                         cube ([1, 1, 100]).translate ([-half_x, -half_y, -20]));
     bounds = color ("red", bounds);
-    
+    // Motors
     var motor1 = nema.mesh ()
         .translate ([-half_x + nema.half_size, -half_y + nema.half_size, 0]);
     var motor2 = nema.mesh ()
         .translate ([half_x - nema.half_size, -half_y + nema.half_size, 0]);
-
+    // Y rods
     var rod_y1 = cylinder ({r: Size.rod_y_r, h: Size.rod_y_l, fn: FN})
         .rotateX (-90)
         .translate ([-half_x + Size.rod_y_wall_dx, -half_y + nema.side_size, Size.rod_y_dz]);
     rod_y1 = color ("gray", rod_y1);
 
     var rod_y2 = rod_y1.mirroredX();
+    // X rods
+    var head_dy = 20;           // TODO head offset Y from rod_x1
+
+    var rod_x1_pos = function (param_y) {
+        return (param_y - half_y + nema.side_size + nema_mount.rod_support_wall
+                + head_dy);
+    };
+
+    var rod_x1 = color ("gray",
+                        cylinder ({r: Size.rod_x_r, h: Size.rod_x_l, fn: FN}));
+    rod_x1 = rod_x1.rotateY (90).translate ([-half_x + Size.rod_y_wall_dx,
+                                              rod_x1_pos (params.pos_y),
+                                             Size.rod_x_dz])
+    var rod_x2 = rod_x1.translate ([0, Size.rod_x_base_dy, 0]);
     
     return union (bounds,
                   motor1,
                   motor2,
-                  rod_y1, rod_y2);
+                  rod_y1, rod_y2,
+                  rod_x1, rod_x2);
 }
 
 
