@@ -597,15 +597,15 @@ function gantry_mesh () {
     var head_dy = 20;           // TODO head offset Y from rod_x1
 
     var rod_x1_pos = function (param_y) {
-        return (param_y - half_y + nema.side_size + nema_mount.rod_support_wall
+        return (param_y - half_y + nema.side_size + nema_mount.rod_support_dy
                 + head_dy);
     };
 
     var rod_x1 = color ("gray",
                         cylinder ({r: rod_x.r, h: rod_x.l, fn: FN}));
     rod_x1 = rod_x1.rotateY (90).translate ([-half_x + Size.rod_y_wall_dx,
-                                              rod_x1_pos (params.pos_y),
-                                             Size.rod_x_dz])
+                                             rod_x1_pos (params.pos_y),
+                                             Size.rod_x_dz]);
     var rod_x2 = rod_x1.translate ([0, Size.rod_x_base_dy, 0]);
 
     // Y rods LM_UU
