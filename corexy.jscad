@@ -27,7 +27,7 @@ function getParameterDefinitions() {
             caption: 'What to show :', 
             type: 'choice', 
             values: [0, 1, 2, 3, 4, 5, -1, 6, 7, 8, 9, 10, 11, 12], 
-            initial: 3,
+            initial: 0,
             captions: ["-----",                // 0
                        "All printer assembly", // 1
                        "Assembly, no walls",   // 2
@@ -158,14 +158,12 @@ var Size = {
         head_r: 8.72 / 2,       // max 8.72 min 8.28
         head_h: 5
     },
-    rod_wall: 3,
-    rod_x: {},
-    rod_y: {},
-    rod_z: {},
+
+    rod_wall: 3,                // wall thickness around rods
 
     rod_x_base_dy: 30,          // Base distance between two X rods.
-    // Belts 
-    belt1_dz: 6, // belt height above gantry base (motor mount surface).
+    // Belts
+    motor_mount_base_h: 4,      // height of base above stepper mount surface.
 
     idler_support_h: 0.4,       // Height of builtin washer
     lmuu_fix_plate: 6,          // Width of LM_UU fix plate for M3 screws.
@@ -203,16 +201,20 @@ var Size = {
         if (params.z_rods_d == 12) lmuu_z = lm12uu;
 
         // Distances calculation
+
         // X distances
 
         // X distance from wall to Y rod axis
-        this.rod_y_wall_dx = 2 + lmuu_y.ro;
+        this.rod_y_wall_dx = 5 + lmuu_y.ro;
+        
         this.wall_belt_outer_dx = nema.side_size / 2 + gt2_pulley.belt_ro;
         this.wall_belt_inner_dx = this.wall_belt_outer_dx - belt.thickness;
         this.rod_y_car_idler_dx = this.wall_belt_outer_dx + idler.r_w - this.rod_y_wall_dx;
         
 
-        // Z distance from base (motor mount surface).
+        // Z distances from base (motor mount surface).
+        // belt height above gantry base (motor mount surface).
+        this.belt1_dz = this.motor_mount_base_h + 1;
         this.belt2_dz = this.belt1_dz + belt.width + idler.belt_offset;
         this.rod_x_dz = this.belt1_dz - 1 - rod_x.r;
         this.rod_y_dz = this.rod_x_dz - rod_x.r - lmuu_y.ro;
@@ -514,18 +516,21 @@ var carriage_y = {
 
 function Nema_mount () {
     this.wall_trap_h = 20; // height of wall inside support (trap height)
-    this.thickness = 5;    // thickness of top wall support
+    this.thickness = 7;    // thickness of top wall support
     this.thickness_x = 9;  // thickness of X wall support
-
-    this.rod_support_wall = 8;  // thickness of Y rod support.
+    this.rod_support_dy = 8;  // thickness of Y rod support.
+    
     this.mesh = function () {
         var nema_screw_offset = nema.side_size / 2 - nema.mount_dist;
         var height = this.thickness + this.wall_trap_h;
-        var size_y = nema.side_size + this.rod_support_wall;
+        var size_y = nema.side_size + this.rod_support_dy;
+        var rod_support_r = rod_y.r + Size.rod_wall;
 
         return union (
             // base
-            cube ([Size.rod_y_wall_dx, size_y, this.thickness + 2]),
+            color ("green", cube ([Size.rod_y_wall_dx + rod_support_r,
+                                 size_y,
+                                 Size.motor_mount_base_h])),
             // wall support
             color ("red", cube ([this.thickness_x, size_y, this.wall_trap_h])),
             //top fix
@@ -537,7 +542,18 @@ function Nema_mount () {
                    this.wall_trap_h / 2  + this.thickness])
                 .translate([-params.box_wall - this.thickness,
                             0,
-                            this.wall_trap_h / 2])
+                            this.wall_trap_h / 2]),
+            cylinder ({r: rod_support_r, h: this.rod_support_dy, fn: FN})
+                .rotateX (-90)
+                .translate ([Size.rod_y_wall_dx, nema.side_size, Size.rod_y_dz]),
+            difference (
+                cube ([Size.rod_y_wall_dx + rod_support_r,
+                       this.rod_support_dy,
+                       abs (Size.rod_y_dz) + rod_support_r]),
+                cube ([rod_support_r, this.rod_support_dy, rod_support_r])
+                    .translate ([Size.rod_y_wall_dx, 0, 0])
+            )
+                .translate ([0, nema.side_size, Size.rod_y_dz - rod_support_r])
         );
     };
 }
@@ -593,19 +609,30 @@ function gantry_mesh () {
     var rod_x2 = rod_x1.translate ([0, Size.rod_x_base_dy, 0]);
 
     // Y rods LM_UU
-
+    var lmuu1_dy = rod_x1_pos (params.pos_y) - lmuu_x.l / 2;
     var lmuu1 = lmuu_y.mesh ()
         .rotateX (-90)
         .translate ([-half_x + Size.rod_y_wall_dx,
-                     rod_x1_pos (params.pos_y),
+                     lmuu1_dy,
                      Size.rod_y_dz]);
+    var lmuu2 = lmuu1.translate ([0, lmuu_x.l + 0.2, 0]);
+
+    var lmuu3 = lmuu1.mirroredX ();
+    var lmuu4 = lmuu2.mirroredX ();
+
+    // Motor mounts.
+    var motor_mount1 = nema_mount.mesh ()
+        .translate ([-half_x, -half_y, 0]);
+
+    var motor_mount2 = motor_mount1.mirroredX ();
     
     return union (bounds,
                   motor1,
                   motor2,
                   rod_y1, rod_y2,
                   rod_x1, rod_x2,
-                  lmuu1);
+                  lmuu1, lmuu2, lmuu3, lmuu4,
+                  motor_mount1, motor_mount2);
 }
 
 
