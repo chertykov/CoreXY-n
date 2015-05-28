@@ -4,6 +4,14 @@ var params;                        // parameter definitions.
 var FN;                            // global resolution
 var nema;                          // nema object. 14 or 17
 var idler;                         // idler object (initialized in main)
+// Linear bearing objects.
+var lmuu_x;
+var lmuu_y;
+var lmuu_z;
+// Smooth rods.
+var rod_x = {};
+var rod_y = {};
+var rod_z = {};
 
 // TODO remove all this vars.
 var _rod_x_length = 300; // will be calculated in main from parameters.
@@ -33,7 +41,7 @@ function getParameterDefinitions() {
                        "Z top",                // 9
                        "Z bottom",             // 10
                        "Z slide",              // 11
-                       "Carriage X",           // 12
+                       "Carriage X"            // 12
                       ]
         },
         {
@@ -154,54 +162,51 @@ var Size = {
     rod_x: {},
     rod_y: {},
     rod_z: {},
-    lmuu_x: {},
-    lmuu_y: {},
-    lmuu_z: {},
 
     rod_x_base_dy: 30,          // Base distance between two X rods.
     // Belts 
-    belt1_dz: 4, // belt height above gantry base (motor mount surface).
+    belt1_dz: 6, // belt height above gantry base (motor mount surface).
 
     idler_support_h: 0.4,       // Height of builtin washer
     lmuu_fix_plate: 6,          // Width of LM_UU fix plate for M3 screws.
 
     calc: function () {
-        this.rod_x_d = params.xy_rods_d;
-        this.rod_x_r = params.xy_rods_d / 2;
-        this.rod_x_l = _rod_x_length;
+        rod_x.d = params.xy_rods_d;
+        rod_x.r = params.xy_rods_d / 2;
+        rod_x.l = _rod_x_length;
 
-        this.rod_y_d = params.xy_rods_d;
-        this.rod_y_r = params.xy_rods_d / 2;
-        this.rod_y_l = _rod_y_length;
+        rod_y.d = params.xy_rods_d;
+        rod_y.r = params.xy_rods_d / 2;
+        rod_y.l = _rod_y_length;
 
-        this.rod_z_d = params.z_rods_d;
-        this.rod_z_r = params.z_rods_d / 2;
-        this.rod_z_l = _rod_z_length;
+        rod_z.d = params.z_rods_d;
+        rod_z.r = params.z_rods_d / 2;
+        rod_z.l = _rod_z_length;
 
         
         if (params.xy_rods_d == 6) {
-            this.lmuu_x = lm6uu;
-            this.lmuu_y = lm6uu;
+            lmuu_x = lm6uu;
+            lmuu_y = lm6uu;
         }
         if (params.xy_rods_d == 8) {
-            this.lmuu_x = lm8uu;
-            this.lmuu_y = lm8uu;
+            lmuu_x = lm8uu;
+            lmuu_y = lm8uu;
         }
         if (params.xy_rods_d == 10) {
-            this.lmuu_x = lm10uu;
-            this.lmuu_y = lm10uu;
+            lmuu_x = lm10uu;
+            lmuu_y = lm10uu;
         }
         
-        if (params.z_rods_d == 6) this.lmuu_z = lm6uu;
-        if (params.z_rods_d == 8) this.lmuu_z = lm8uu;
-        if (params.z_rods_d == 10) this.lmuu_z = lm10uu;
-        if (params.z_rods_d == 12) this.lmuu_z = lm12uu;
+        if (params.z_rods_d == 6) lmuu_z = lm6uu;
+        if (params.z_rods_d == 8) lmuu_z = lm8uu;
+        if (params.z_rods_d == 10) lmuu_z = lm10uu;
+        if (params.z_rods_d == 12) lmuu_z = lm12uu;
 
         // Distances calculation
         // X distances
 
         // X distance from wall to Y rod axis
-        this.rod_y_wall_dx = 2 + this.lmuu_y.ro;
+        this.rod_y_wall_dx = 2 + lmuu_y.ro;
         this.wall_belt_outer_dx = nema.side_size / 2 + gt2_pulley.belt_ro;
         this.wall_belt_inner_dx = this.wall_belt_outer_dx - belt.thickness;
         this.rod_y_car_idler_dx = this.wall_belt_outer_dx + idler.r_w - this.rod_y_wall_dx;
@@ -209,8 +214,8 @@ var Size = {
 
         // Z distance from base (motor mount surface).
         this.belt2_dz = this.belt1_dz + belt.width + idler.belt_offset;
-        this.rod_x_dz = this.belt1_dz - 1 - Size.rod_x_r;
-        this.rod_y_dz = this.rod_x_dz - Size.rod_x_r - Size.lmuu_y.ro;
+        this.rod_x_dz = this.belt1_dz - 1 - rod_x.r;
+        this.rod_y_dz = this.rod_x_dz - rod_x.r - lmuu_y.ro;
         
         this.idler1_dz = this.belt1_dz - idler.h_f;
         this.idler2_dz = this.belt2_dz - idler.h_f;
@@ -301,12 +306,12 @@ function Gt2_Pulley_16 () {
         var mesh =
             difference (
                 union (
-                    cylinder ({r: 13 / 2, h: this.h_base}),
-                    cylinder ({r: this.ro, h: this.h}),
-                    cylinder ({r: 13 / 2, h: this.h_flange})
+                    cylinder ({r: 13 / 2, h: this.h_base, fn: FN}),
+                    cylinder ({r: this.ro, h: this.h, fn: FN}),
+                    cylinder ({r: 13 / 2, h: this.h_flange, fn: FN})
                         .translate ([0, 0, this.h - this.h_flange])
                 ),
-                cylinder ({r: this.ri, h: this.h + 2})
+                cylinder ({r: this.ri, h: this.h + 2, fn: FN})
                     .translate ([0, 0, -1])
             );
 
@@ -317,7 +322,7 @@ function Gt2_Pulley_16 () {
         if (base == "belt")
             mesh = mesh.translate ([0, 0, -this.h_base]);
         
-        return mesh.setColor ([0.85, 0.85, 0.85]);
+        return color ("SlateGray", mesh);
     };
 }
 
@@ -325,7 +330,6 @@ function Gt2_Pulley_16 () {
 var gt2_pulley = new Gt2_Pulley_16 ();
 
 // Nema 17 x 39 parameters.
-// XXX TODO nema 14
 var nema14 = {
     len: 28.0,              // Motor length [26,28,34]
     side_size: 35.3,        // Motor width
@@ -473,8 +477,9 @@ var Lm_uu = function (dim) {
     this.l = dim.l;
     this.mesh = function () {
         return difference (
-            cylinder ({r: this.ro, h: this.l}),
-            cylinder ({r: this.ri, h: this.l + 2}).translate ([0, 0, -1])
+            cylinder ({r: this.ro, h: this.l, fn: FN}),
+            cylinder ({r: this.ri, h: this.l + 2, fn: FN})
+                .translate ([0, 0, -1])
         ).setColor (0.5, 0.55, 0.55, 0.6);
     };
 };
@@ -539,6 +544,7 @@ function Nema_mount () {
 
 var nema_mount = new Nema_mount ();
 
+
 // Core XY gantry.
 function gantry_mesh () {
     var half_x = Size.size_x / 2;
@@ -550,12 +556,22 @@ function gantry_mesh () {
                         cube ([1, 1, 100]).translate ([-half_x, -half_y, -20]));
     bounds = color ("red", bounds);
     // Motors
-    var motor1 = nema.mesh ()
+    var motor1 = union (
+        nema.mesh (),
+        gt2_pulley.mesh ("belt")
+            .translate ([0, 0, Size.belt1_dz])
+    )
         .translate ([-half_x + nema.half_size, -half_y + nema.half_size, 0]);
-    var motor2 = nema.mesh ()
+
+    
+    var motor2 = union (
+        nema.mesh (),
+        gt2_pulley.mesh ("belt")
+            .translate ([0, 0, Size.belt2_dz])
+    )
         .translate ([half_x - nema.half_size, -half_y + nema.half_size, 0]);
     // Y rods
-    var rod_y1 = cylinder ({r: Size.rod_y_r, h: Size.rod_y_l, fn: FN})
+    var rod_y1 = cylinder ({r: rod_y.r, h: rod_y.l, fn: FN})
         .rotateX (-90)
         .translate ([-half_x + Size.rod_y_wall_dx, -half_y + nema.side_size, Size.rod_y_dz]);
     rod_y1 = color ("gray", rod_y1);
@@ -570,17 +586,26 @@ function gantry_mesh () {
     };
 
     var rod_x1 = color ("gray",
-                        cylinder ({r: Size.rod_x_r, h: Size.rod_x_l, fn: FN}));
+                        cylinder ({r: rod_x.r, h: rod_x.l, fn: FN}));
     rod_x1 = rod_x1.rotateY (90).translate ([-half_x + Size.rod_y_wall_dx,
                                               rod_x1_pos (params.pos_y),
                                              Size.rod_x_dz])
     var rod_x2 = rod_x1.translate ([0, Size.rod_x_base_dy, 0]);
+
+    // Y rods LM_UU
+
+    var lmuu1 = lmuu_y.mesh ()
+        .rotateX (-90)
+        .translate ([-half_x + Size.rod_y_wall_dx,
+                     rod_x1_pos (params.pos_y),
+                     Size.rod_y_dz]);
     
     return union (bounds,
                   motor1,
                   motor2,
                   rod_y1, rod_y2,
-                  rod_x1, rod_x2);
+                  rod_x1, rod_x2,
+                  lmuu1);
 }
 
 
@@ -597,6 +622,41 @@ function read_nums (s) {
     // Convert back to a number
     array = array.map(function(i) {return +i;});
     return array; 
+}
+
+function extend_CSG () {
+
+    CSG.up = function (n) {
+        return this.translate ([0, 0, n]);
+    }
+
+    CSG.down = function (n) {
+        return this.translate ([0, 0, -n]);
+    }
+
+    CSG.left = function (n) {
+        return this.translate ([-n, 0, 0]);
+    }
+
+    CSG.right = function (n) {
+        return this.translate ([n, 0, 0]);
+    }
+
+    CSG.left = function (n) {
+        return this.translate ([-n, 0, 0]);
+    }
+
+    CSG.right = function (n) {
+        return this.translate ([n, 0, 0]);
+    }
+
+    CSG.back = function (n) {
+        return this.translate ([0, -n, 0]);
+    }
+
+    CSG.forward = function (n) {
+        return this.translate ([0, n, 0]);
+    }
 }
 
 function main (parameters) {
@@ -625,6 +685,8 @@ function main (parameters) {
     
     CSG.defaultResolution2D = params.fn;
     FN = params.fn;
+
+    extend_CSG ();
 
     var mesh = [];
 
