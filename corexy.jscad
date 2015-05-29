@@ -13,6 +13,19 @@ var rod_x = {};
 var rod_y = {};
 var rod_z = {};
 
+
+// Plastic parts
+
+// Motor mount
+var nema_mount;
+// Idlers
+var idler_mount;
+// X carriage
+var carriage_x;
+// Y carriage
+var carriage_y;
+
+
 // TODO remove all this vars.
 var _rod_x_length = 300; // will be calculated in main from parameters.
 var _rod_y_length = 300; // will be calculated in main from parameters.
@@ -510,9 +523,12 @@ var lm12uu = new Lm_uu ({
     l: 57
 });
 
-var carriage_y = {
-    
-};
+function Idler_mount () {
+    this.mesh = function () {
+        var mesh = cube ([10,10,10]);
+        return mesh;
+    };
+}
 
 function Nema_mount () {
     this.wall_trap_h = 20; // height of wall inside support (trap height)
@@ -561,7 +577,7 @@ function Nema_mount () {
             // round
             roundBoolean2(this.thickness, size_y, "br")
                 .translate([-params.box_wall - this.thickness, 0, this.wall_trap_h]),
-            // holes to fix on the wood side - version simple
+            // holes to fix on the wood side
             // wood screw holes
             cylinder({r: Size.m4.screw_r, h: 20, fn: 8})
                 .rotateX(-90)
@@ -604,14 +620,17 @@ function Nema_mount () {
                 .rotateX (-90)
                 .translate ([Size.rod_y_wall_dx,
                              0,
+                             Size.rod_y_dz]),
+            // Y rod hole bevel.
+            cylinder ({r1: rod_y.r, r2: rod_y.r + 1, h: 1, fn: FN})
+                .rotateX (-90)
+                .translate ([Size.rod_y_wall_dx,
+                             size_y - 0.5,
                              Size.rod_y_dz])
-            );
-
+        );
         return mesh;
     };
 }
-
-var nema_mount;
 
 
 // Core XY gantry.
@@ -712,7 +731,7 @@ function roundBoolean2 (diam, length, edge) {
 
     return difference (
         cube ([diam, length, diam]),
-        cylinder ({r: diam, h: length})
+        cylinder ({r: diam, h: length, fn: FN})
             .rotateX(-90)
             .translate (tr)
     );
@@ -808,6 +827,7 @@ function main (parameters) {
     Size.calc ();
     
     nema_mount = new Nema_mount ();
+    idler_mount = new Idler_mount ();
     
     switch (+params.output) {
     case 0:                 // Test output
@@ -824,6 +844,9 @@ function main (parameters) {
         break;
     case 3:                     // Gantry assembly
         mesh.push (gantry_mesh ());
+        break;
+    case 7:                     // Idler mount
+        mesh.push (idler_mount.mesh ());
         break;
     default:
         mesh.push (idler.mesh ());
