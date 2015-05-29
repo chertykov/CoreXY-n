@@ -388,7 +388,7 @@ var nema17 = {
 function stepper (nema)
 {
     var length = nema.len / 2;
-    var width = nema.side_size / 2;
+    var width = nema.half_size;
     var z = width;
     var ch = sqrt (2.0) * width - sqrt (0.5) * nema.body_chamfer;
     var ch2 = sqrt (2.0) * width - sqrt (0.5) * nema.cap_chamfer;
@@ -516,9 +516,10 @@ var carriage_y = {
 
 function Nema_mount () {
     this.wall_trap_h = 20; // height of wall inside support (trap height)
-    this.thickness = 7;    // thickness of top wall support
-    this.thickness_x = 9;  // thickness of X wall support
+    this.thickness = 5;    // thickness of top wall support
+    this.thickness_x = (nema.half_size - nema.mount_dist) * 2; // thickness of X wall support
     this.rod_support_dy = 8;  // thickness of Y rod support.
+    this.groove_d = 0.6;      // groove for internal corners.
     
     this.mesh = function () {
         var nema_screw_offset = nema.side_size / 2 - nema.mount_dist;
@@ -526,13 +527,13 @@ function Nema_mount () {
         var size_y = nema.side_size + this.rod_support_dy;
         var rod_support_r = rod_y.r + Size.rod_wall;
 
-        return union (
+        var mesh = union (
             // base
-            color ("green", cube ([Size.rod_y_wall_dx + rod_support_r,
+            cube ([Size.rod_y_wall_dx + rod_support_r,
                                  size_y,
-                                 Size.motor_mount_base_h])),
+                   Size.motor_mount_base_h]),
             // wall support
-            color ("red", cube ([this.thickness_x, size_y, this.wall_trap_h])),
+            cube ([this.thickness_x, size_y, this.wall_trap_h]),
             //top fix
             cube ([params.box_wall + this.thickness_x, size_y, this.thickness])
                 .translate([-params.box_wall, 0, this.wall_trap_h]),
@@ -555,10 +556,62 @@ function Nema_mount () {
             )
                 .translate ([0, nema.side_size, Size.rod_y_dz - rod_support_r])
         );
+        mesh = difference (
+            mesh,
+            // round
+            roundBoolean2(this.thickness, size_y, "br")
+                .translate([-params.box_wall - this.thickness, 0, this.wall_trap_h]),
+            // holes to fix on the wood side - version simple
+            // wood screw holes
+            cylinder({r: Size.m4.screw_r, h: 20, fn: 8})
+                .rotateX(-90)
+                .rotateZ(90)
+                .translate([-params.box_wall, 7, this.wall_trap_h - 5]),
+            cylinder ({r: Size.m4.screw_r, h: 20, fn: 8})
+                .rotateX(-90)
+                .rotateZ(90)
+                .translate([-params.box_wall, size_y - 7, this.wall_trap_h - 5]),
+            // Corner grooves
+            cylinder ({d: this.groove_d, h: size_y + 2, fn: 8})
+                .rotateX(-90)
+                .translate ([-0.2, -1, this.wall_trap_h - 0.2]),
+            cylinder ({d: this.groove_d, h: size_y + 2, fn: 8})
+                .rotateX(-90)
+                .translate ([-params.box_wall + 0.2, -1, this.wall_trap_h - 0.2]),
+          // Screw head traps.
+            cylinder ({r: Size.m3.head_r, h: 10, fn: FN})
+                .translate ([nema_screw_offset,
+                             nema_screw_offset,
+                             height - Size.m3.head_h]),
+            cylinder ({r: Size.m3.head_r, h: 10, fn: FN})
+                .translate ([nema_screw_offset,
+                             nema.side_size - nema_screw_offset,
+                             height - Size.m3.head_h]),
+          // Screw holes.
+            cylinder ({r: Size.m3.r, h: height, fn: FN})
+                .translate ([nema_screw_offset,
+                             nema_screw_offset,
+                             0]),
+            cylinder ({r: Size.m3.r, h: height, fn: FN})
+                .translate ([nema_screw_offset,
+                             nema.side_size - nema_screw_offset,
+                             0]),
+            // Motor ring.
+            cylinder ({r: nema.ring_r+0.5, h: height, fn: FN})
+                .translate ([nema.half_size, nema.half_size, 0]),
+            // Y rod hole.
+            cylinder ({r: rod_y.r + Size.clr.tight, h: rod_y.l, fn: FN})
+                .rotateX (-90)
+                .translate ([Size.rod_y_wall_dx,
+                             0,
+                             Size.rod_y_dz])
+            );
+
+        return mesh;
     };
 }
 
-var nema_mount = new Nema_mount ();
+var nema_mount;
 
 
 // Core XY gantry.
@@ -635,6 +688,35 @@ function gantry_mesh () {
                   motor_mount1, motor_mount2);
 }
 
+
+function roundBoolean2 (diam, length, edge) {
+    var tr = [0, 0, 0];
+    
+    switch (edge) {
+    case "bl":
+        break;
+
+    case "tl":
+        tr = [0, 0, diam];
+        break;
+        
+    case "br":
+        tr = [diam, 0, 0];
+        break;
+        
+    case "tr":
+        tr = [diam, 0, diam];
+        break;
+
+    }
+
+    return difference (
+        cube ([diam, length, diam]),
+        cylinder ({r: diam, h: length})
+            .rotateX(-90)
+            .translate (tr)
+    );
+}
 
 // Convert comma separated numbers to array.
 // It's used for parsing X,Y,Z parameters.
@@ -725,11 +807,19 @@ function main (parameters) {
     // Calculate all printer dimensions.
     Size.calc ();
     
+    nema_mount = new Nema_mount ();
+    
     switch (+params.output) {
     case 0:                 // Test output
-        if (params.debug)
-            mesh.push (nema.mesh ()
-                       .translate([nema.half_size, nema.half_size, 0]));
+        if (params.debug) 
+            mesh.push (
+                union (
+                    nema.mesh (),
+                    gt2_pulley.mesh ("belt")
+                        .translate ([0, 0, Size.belt2_dz])
+                )
+                    .translate([nema.half_size, nema.half_size, 0])
+            );
         mesh.push (nema_mount.mesh ());
         break;
     case 3:                     // Gantry assembly
