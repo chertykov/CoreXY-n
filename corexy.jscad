@@ -505,9 +505,28 @@ function Idler_mount () {
     this.wall_idler2_dx = nema.half_size + idler.r_w * 2 + belt.thickness;
     this.idler1_dz = Size.belt1_dz - idler.h_f;
     this.idler2_dz = Size.belt2_dz - idler.h_f;
+    this.idler_ear_h = 5;
+
         
     this.mesh = function () {
-        var mesh = cube ([10,10,10]);
+        var height = nema_mount.thickness + nema_mount.wall_trap_h;
+        var c_dx = this.wall_idler2_dx + params.box_wall +
+            nema_mount.thickness + idler.shaft.head_r + Size.rod_wall;
+        var c_dy = this.wall_idler_dy + params.box_wall + nema_mount.thickness;
+        var mesh = union (
+            cube ([c_dx, c_dy, height])
+                .left (params.box_wall + nema_mount.thickness)
+                .back (this.wall_idler_dy),
+            cylinder ({r: idler.shaft.head_r + Size.rod_wall, h: height, fn: FN})
+                .translate ([this.wall_idler1_dx,
+                             -this.wall_idler_dy,
+                             0]),
+            cylinder ({r: idler.shaft.head_r + Size.rod_wall, h: height, fn: FN})
+                .translate ([this.wall_idler2_dx,
+                             -this.wall_idler_dy,
+                             0])
+        );
+        
 
         return mesh;
     };
