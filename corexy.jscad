@@ -43,7 +43,7 @@ function getParameterDefinitions() {
             caption: 'What to show :', 
             type: 'choice', 
             values: [0, 1, 2, 3, 4, 5, -1, 6, 7, 8, 9, 10, 11, 12], 
-            initial: 3,
+            initial: 7,
             captions: ["-----",                // 0
                        "All printer assembly", // 1
                        "Assembly, no walls",   // 2
@@ -504,7 +504,7 @@ function Lm_uu (dim) {
 
 function Idler_mount () {
     this.wall_idler_dy = idler.r_w + belt.thickness + 5;
-    this.wall_idler1_dx = (2 + nema_mount.thickness_x + idler.r_w +
+    this.wall_idler1_dx = (nema_mount.thickness + idler.r_w +
                            belt.thickness);
     this.wall_idler2_dx = nema.half_size + idler.r_w * 2 + belt.thickness;
     this.idler_ear_h = 5;
@@ -538,14 +538,14 @@ Idler_mount.prototype.mesh = function () {
                             0])
         );
 
-    var slot = cube ({size: [this.idler_ear_r * 2,
-                             this.idler_ear_r * 2,
-                             Size.idler_slot_size_dz],
-                      center: [1, 0, 0]
-                     })
+    var slot_r = idler.r_w + belt.thickness + 1;
+    var slot = cube ({size: [slot_r * 2, slot_r * 2, Size.idler_slot_size_dz],
+                      center: [1, 0, 0]})
         .mirroredY ();
 
-    var slot1 = cylinder ({r: idler.r_f + 1,
+    var path = cube ([c_dx, belt.thickness + 2, idler.h]).mirroredY ();
+
+    var slot1 = cylinder ({r: slot_r,
                            h: Size.idler_slot_size_dz,
                            fn: FN});
     var screw_head = cylinder ({r: idler.shaft.head_r,
@@ -560,6 +560,10 @@ Idler_mount.prototype.mesh = function () {
         slot.translate ([this.wall_idler2_dx,
                          -this.wall_idler_dy,
                          Size.idler2_slot_dz]),
+        slot.translate ([this.wall_idler2_dx + slot_r,
+                         -this.wall_idler_dy + slot_r,
+                         Size.idler2_slot_dz]),
+        
         slot1.translate ([this.wall_idler1_dx,
                           -this.wall_idler_dy,
                           Size.idler1_slot_dz]),
@@ -574,7 +578,10 @@ Idler_mount.prototype.mesh = function () {
                                0]),
         screw_head.mirroredX ().translate ([this.wall_idler1_dx,
                                -this.wall_idler_dy,
-                               0])
+                               0]),
+        path.translate ([this.wall_idler1_dx,
+                         -this.wall_idler_dy + slot_r,
+                         Size.idler1_dz]),
     ]);
 
         return mesh;
