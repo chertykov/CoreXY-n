@@ -43,7 +43,7 @@ function getParameterDefinitions() {
             caption: 'What to show :', 
             type: 'choice', 
             values: [0, 1, 2, 3, 4, 5, -1, 6, 7, 8, 9, 10, 11, 12], 
-            initial: 7,
+            initial: 3,
             captions: ["-----",                // 0
                        "All printer assembly", // 1
                        "Assembly, no walls",   // 2
@@ -230,7 +230,8 @@ var Size = {
         
         this.wall_belt_outer_dx = nema.side_size / 2 + gt2_pulley.belt_ro;
         this.wall_belt_inner_dx = this.wall_belt_outer_dx - belt.thickness;
-        this.rod_y_car_idler_dx = this.wall_belt_outer_dx + idler.r_w - this.rod_y_wall_dx;
+        this.rod_y_car_idler_dx = this.wall_belt_outer_dx + idler.r_w -
+            this.rod_y_wall_dx;
         
 
         // Z distances from base (motor mount surface).
@@ -502,7 +503,7 @@ function Lm_uu (dim) {
 }
 
 function Idler_mount () {
-    this.wall_idler_dy = idler.r_w + belt.thickness + 2;
+    this.wall_idler_dy = idler.r_w + belt.thickness + 5;
     this.wall_idler1_dx = (2 + nema_mount.thickness_x + idler.r_w +
                            belt.thickness);
     this.wall_idler2_dx = nema.half_size + idler.r_w * 2 + belt.thickness;
@@ -528,13 +529,21 @@ Idler_mount.prototype.mesh = function () {
                        h: height, fn: FN})
                 .translate ([this.wall_idler2_dx,
                              -this.wall_idler_dy,
-                             0])
+                             0]),
+            cube ([abs (this.wall_idler2_dx - this.wall_idler1_dx),
+                   this.idler_ear_r,
+                   height])
+                .translate ([this.wall_idler1_dx,
+                            -this.wall_idler_dy - this.idler_ear_r,
+                            0])
         );
 
     var slot = cube ({size: [this.idler_ear_r * 2,
                              this.idler_ear_r * 2,
-                             Size.idler_slot_size_dz]
-                     });
+                             Size.idler_slot_size_dz],
+                      center: [1, 0, 0]
+                     })
+        .mirroredY ();
 
     var slot1 = cylinder ({r: idler.r_f + 1,
                            h: Size.idler_slot_size_dz,
@@ -545,11 +554,11 @@ Idler_mount.prototype.mesh = function () {
         .up (height - idler.shaft.head_h);
 
     mesh = mesh.subtract ([
-        slot.translate ([this.wall_idler1_dx - this.idler_ear_r,
-                         -this.wall_idler_dy - this.idler_ear_r * 2,
+        slot.translate ([this.wall_idler1_dx,
+                         -this.wall_idler_dy,
                          Size.idler1_slot_dz]),
-        slot.translate ([this.wall_idler2_dx - this.idler_ear_r,
-                         -this.wall_idler_dy - this.idler_ear_r * 2,
+        slot.translate ([this.wall_idler2_dx,
+                         -this.wall_idler_dy,
                          Size.idler2_slot_dz]),
         slot1.translate ([this.wall_idler1_dx,
                           -this.wall_idler_dy,
@@ -683,6 +692,8 @@ Nema_mount.prototype.mesh = function () {
 function gantry_mesh () {
     var half_x = Size.size_x / 2;
     var half_y = Size.size_y / 2;
+    var motor_dx = half_x - nema.half_size;
+    var motor_dy  = -half_y + nema.half_size;
 
     var bounds = union (cube ([1, 1, 100]).translate ([half_x, half_y, -20]),
                         cube ([1, 1, 100]).translate ([-half_x, half_y, -20]),
@@ -695,7 +706,7 @@ function gantry_mesh () {
         gt2_pulley.mesh ("belt")
             .translate ([0, 0, Size.belt1_dz])
     )
-        .translate ([-half_x + nema.half_size, -half_y + nema.half_size, 0]);
+        .translate ([-motor_dx, motor_dy, 0]);
 
     
     var motor2 = union (
@@ -703,7 +714,8 @@ function gantry_mesh () {
         gt2_pulley.mesh ("belt")
             .translate ([0, 0, Size.belt2_dz])
     )
-        .translate ([half_x - nema.half_size, -half_y + nema.half_size, 0]);
+        .translate ([motor_dx, motor_dy, 0]);
+
     // Y rods
     var rod_y1 = cylinder ({r: rod_y.r, h: rod_y.l, fn: FN})
         .rotateX (-90)
@@ -745,6 +757,24 @@ function gantry_mesh () {
         .translate ([-half_x, -half_y, 0]);
 
     var motor_mount2 = motor_mount1.mirroredX ();
+
+    // Idler mounts
+    var idler_mount1 = idler_mount.mesh ()
+        .translate ([-half_x, half_y, 0]);
+
+    // Belts
+    // From motor to X carriage idler.
+    var belt1_len = abs (motor_dy - rod_x1_pos (params.pos_y)) + Size.rod_x_base_dy / 2;
+    
+    var belt1 = belt.mesh (belt1_len, "")
+        .rotateZ (90)
+        .translate ([-motor_dx + gt2_pulley.belt_ro, motor_dy, Size.belt1_dz]);
+
+    // From motor to corner idler. TODO this belt not parallel to wall.
+    var belt2_len = Size.size_y - idler_mount.wall_idler_dy - nema.half_size;
+    var belt2 = belt.mesh (belt2_len, "back")
+        .rotateZ (90)
+        .translate ([-motor_dx - gt2_pulley.belt_ro, motor_dy, Size.belt1_dz]);
     
     return union (bounds,
                   motor1,
@@ -752,7 +782,9 @@ function gantry_mesh () {
                   rod_y1, rod_y2,
                   rod_x1, rod_x2,
                   lmuu1, lmuu2, lmuu3, lmuu4,
-                  motor_mount1, motor_mount2);
+                  motor_mount1, motor_mount2,
+                  idler_mount1,
+                  belt1, belt2);
 }
 
 
