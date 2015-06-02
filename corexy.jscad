@@ -553,6 +553,15 @@ Idler_mount.prototype.mesh = function () {
                                 fn: FN})
         .up (height - idler.shaft.head_h);
 
+    var wall1 = cube ([params.box_wall + Size.clr.free,
+                       60,
+                       nema_mount.wall_trap_h])
+        .left (Size.clr.free / 2)
+        .rotateZ (180);
+    var wall2 = cube ([60 + params.box_wall,
+                       params.box_wall + Size.clr.free,
+                       nema_mount.wall_trap_h])
+        .left (params.box_wall + Size.clr.free / 2)
     mesh = mesh.subtract ([
         slot.translate ([this.wall_idler1_dx,
                          -this.wall_idler_dy,
@@ -582,6 +591,7 @@ Idler_mount.prototype.mesh = function () {
         path.translate ([this.wall_idler1_dx,
                          -this.wall_idler_dy + slot_r,
                          Size.idler1_dz]),
+        wall1, wall2,
     ]);
 
         return mesh;
