@@ -179,7 +179,7 @@ var Size = {
 
     rod_x_base_dy: 30,          // Base distance between two X rods.
     // Belts
-    motor_mount_base_h: 4,      // height of base above stepper mount surface.
+    motor_mount_base_h: 3,      // height of base above stepper mount surface.
 
     idler_support_h: 0.4,       // Height of builtin washer
     lmuu_fix_plate: 6,          // Width of LM_UU fix plate for M3 screws.
@@ -228,12 +228,6 @@ var Size = {
         // X distance from wall to Y rod axis
         this.rod_y_wall_dx = 5 + lmuu_y.ro;
         
-        this.wall_belt_outer_dx = nema.side_size / 2 + gt2_pulley.belt_ro;
-        this.wall_belt_inner_dx = this.wall_belt_outer_dx - belt.thickness;
-        this.rod_y_car_idler_dx = this.wall_belt_outer_dx + idler.r_w -
-            this.rod_y_wall_dx;
-        
-
         // Z distances from base (motor mount surface).
         // belt height above gantry base (motor mount surface).
         this.belt1_dz = this.motor_mount_base_h + 1;
@@ -341,6 +335,9 @@ function Gt2_Pulley_16 () {
         
         if (base == "belt")
             mesh = mesh.down (this.h_base);
+
+        if (base == "mirrored belt")
+            mesh = mesh.mirroredZ ().up (this.h - this.h_flange);
         
         return color ("SlateGray", mesh);
     };
@@ -543,7 +540,7 @@ Idler_mount.prototype.mesh = function () {
                       center: [1, 0, 0]})
         .mirroredY ();
 
-    var path = cube ([c_dx, belt.thickness + 2, idler.h]).mirroredY ();
+    var path = cube ([c_dx, belt.thickness + 2, belt.width + 2]).mirroredY ();
 
     var slot1 = cylinder ({r: slot_r,
                            h: Size.idler_slot_size_dz,
@@ -940,13 +937,19 @@ function main (parameters) {
     idler_mount = new Idler_mount ();
     
     switch (+params.output) {
-    case 6:                 // Test output
+    case 0:
+        mesh.push (gt2_pulley.mesh ());
+        mesh.push (gt2_pulley.mesh ("belt").right (gt2_pulley.ro * 3));
+        mesh.push (gt2_pulley.mesh ("mirrored belt").right (gt2_pulley.ro * 6));
+        break;
+    case 6:                     // Motor mount
+        // Debug objects: motor and GT2 pulley
         if (params.debug) 
             mesh.push (
                 union (
                     nema.mesh (),
-                    gt2_pulley.mesh ("belt")
-                        .translate ([0, 0, Size.belt2_dz])
+                    gt2_pulley.mesh ("mirrored belt")
+                        .translate ([0, 0, Size.belt1_dz])
                 )
                     .translate([nema.half_size, nema.half_size, 0])
             );
