@@ -540,7 +540,10 @@ Idler_mount.prototype.mesh = function () {
                       center: [1, 0, 0]})
         .mirroredY ();
 
-    var path = cube ([c_dx, belt.thickness + 2, belt.width + 2]).mirroredY ();
+    var path = cube ([c_dx,
+                      belt.thickness + 2,
+                      Size.idler_slot_size_dz])
+        .mirroredY ();
 
     var slot1 = cylinder ({r: slot_r,
                            h: Size.idler_slot_size_dz,
@@ -559,6 +562,7 @@ Idler_mount.prototype.mesh = function () {
                        params.box_wall + Size.clr.free,
                        nema_mount.wall_trap_h])
         .left (params.box_wall + Size.clr.free / 2)
+
     mesh = mesh.subtract ([
         slot.translate ([this.wall_idler1_dx,
                          -this.wall_idler_dy,
@@ -569,7 +573,6 @@ Idler_mount.prototype.mesh = function () {
         slot.translate ([this.wall_idler2_dx + slot_r,
                          -this.wall_idler_dy + slot_r,
                          Size.idler2_slot_dz]),
-        
         slot1.translate ([this.wall_idler1_dx,
                           -this.wall_idler_dy,
                           Size.idler1_slot_dz]),
@@ -585,13 +588,14 @@ Idler_mount.prototype.mesh = function () {
         screw_head.mirroredX ().translate ([this.wall_idler1_dx,
                                -this.wall_idler_dy,
                                0]),
-        path.translate ([this.wall_idler1_dx,
-                         -this.wall_idler_dy + slot_r,
-                         Size.idler1_dz]),
+        color ("white",
+               path.translate ([this.wall_idler1_dx,
+                                -this.wall_idler_dy + slot_r,
+                                Size.idler1_slot_dz])),
         wall1, wall2,
     ]);
 
-        return mesh;
+    return mesh;
 };
 
 function Nema_mount () {
@@ -960,7 +964,7 @@ function main (parameters) {
         break;
     case 7:                     // Idler mount
         mesh.push (idler_mount.mesh ());
-
+        // Debug objects
         if (params.debug) {
             // Walls
             mesh.push (
@@ -978,7 +982,7 @@ function main (parameters) {
             mesh.push (
                 cylinder ({r: rod_y.r, h: 60, fn: FN})
                     .rotateX (90)
-                    .translate ([Size.rod_y_wall_dx, -10, Size.rod_y_dz])
+                    .translate ([Size.rod_y_wall_dx, -5, Size.rod_y_dz])
                     .setColor (0.2, 0.3, 0.3, 0.5)
             );
             // Idlers 
