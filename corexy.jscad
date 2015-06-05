@@ -42,8 +42,8 @@ function getParameterDefinitions() {
             name: 'output', 
             caption: 'What to show :', 
             type: 'choice', 
-            values: [0, 1, 2, 3, 4, 5, -1, 6, 7, 8, 9, 10, 11, 12], 
-            initial: 7,
+            values: [0, 1, 2, 3, 4, 5, -1, 6, 7, 71, 8, 9, 10, 11, 12], 
+            initial: 71,
             captions: ["-----",                // 0
                        "All printer assembly", // 1
                        "Assembly, no walls",   // 2
@@ -53,6 +53,7 @@ function getParameterDefinitions() {
                        "-----",                // nope
                        "Motor mount",          // 6
                        "Idler mount",          // 7
+                       "Y rod support",        // 71
                        "Carriage Y",           // 8
                        "Z top",                // 9
                        "Z bottom",             // 10
@@ -499,6 +500,45 @@ function Lm_uu (dim) {
     };
 }
 
+
+function Rod_support () {
+    this.tensioner_dy = Size.m3.nut_h + 2;
+    this.size_x = rod_y.d + Size.rod_wall * 2;
+    this.size_y = nema_mount.rod_support_dy + this.tensioner_dy +
+        params.box_wall + nema_mount.thickness;
+    this.size_z = abs(Size.rod_y_dz) + nema_mount.wall_trap_h +
+        nema_mount.thickness + rod_y.r + Size.rod_wall * 2;
+}
+
+Rod_support.prototype.mesh = function () {
+    var mesh = union (
+        // back fix
+        cube ([this.size_x, nema_mount.thickness, nema_mount.wall_trap_h / 2])
+            .translate ([0, params.box_wall, nema_mount.wall_trap_h / 2]),
+        // top fix
+        cube ([this.size_x,
+               nema_mount.thickness * 2 + params.box_wall,
+               nema_mount.thickness])
+            .translate ([0,
+                         -nema_mount.thickness,
+                         nema_mount.wall_trap_h]),
+        cube ([this.size_x, nema_mount.thickness, this.size_z])
+            .translate ([0,
+                         -nema_mount.thickness,
+                         -this.size_z + nema_mount.wall_trap_h +
+                         nema_mount.thickness]),
+        cube ([this.size_x,
+               nema_mount.rod_support_dy,
+               Size.rod_wall * 2 + rod_y.d / 3])
+            .translate ([0,
+                         -nema_mount.rod_support_dy - nema_mount.thickness,
+                         -this.size_z + nema_mount.thickness +
+                         nema_mount.wall_trap_h])
+                         
+    );
+    return mesh;
+}
+
 function Idler_mount () {
     this.wall_idler_dy = idler.r_w + belt.thickness + 5;
     this.wall_idler1_dx = (nema_mount.thickness + idler.r_w +
@@ -634,6 +674,7 @@ Nema_mount.prototype.mesh = function () {
             .translate([-params.box_wall - this.thickness,
                         0,
                         this.wall_trap_h / 2]),
+        // Y rod support 
         cylinder ({r: rod_support_r, h: this.rod_support_dy, fn: FN})
             .rotateX (-90)
             .translate ([Size.rod_y_wall_dx, nema.side_size, Size.rod_y_dz]),
@@ -939,6 +980,7 @@ function main (parameters) {
     
     nema_mount = new Nema_mount ();
     idler_mount = new Idler_mount ();
+    rod_support = new Rod_support ();
     
     switch (+params.output) {
     case 0:
@@ -983,6 +1025,50 @@ function main (parameters) {
                 cylinder ({r: rod_y.r, h: 60, fn: FN})
                     .rotateX (90)
                     .translate ([Size.rod_y_wall_dx, -5, Size.rod_y_dz])
+                    .setColor (0.2, 0.3, 0.3, 0.5)
+            );
+            // Idlers 
+            mesh.push (
+                idler.mesh ()
+                    .translate ([idler_mount.wall_idler1_dx,
+                                 -idler_mount.wall_idler_dy,
+                                 Size.idler1_dz]),
+                idler.mesh ()
+                    .translate ([idler_mount.wall_idler2_dx,
+                                 -idler_mount.wall_idler_dy,
+                                 Size.idler2_dz])
+                /*
+                // Motor with pulley.
+                nema.mesh ().union (
+                    gt2_pulley.mesh ("belt").up (Size.belt1_dz))
+                    .translate ([nema.half_size,
+                                 -nema.half_size,
+                                 0])
+                */
+            );
+        }
+        break;
+    case 71:                     // Y Rod support
+        mesh.push (rod_support.mesh ());
+        // Debug objects
+        if (params.debug) {
+            // Walls
+            mesh.push (
+                union (
+                    cube ([params.box_wall, 40, nema_mount.wall_trap_h])
+                        .rotateZ (180),
+                    cube ([40 + params.box_wall,
+                           params.box_wall,
+                           nema_mount.wall_trap_h])
+                        .left (params.box_wall)
+                )
+                    .setColor (0.2, 0.2, 0.2, 0.5)
+            );
+            // Y rod
+            mesh.push (
+                cylinder ({r: rod_y.r, h: 60, fn: FN})
+                    .rotateX (90)
+                    .translate ([rod_support.size_x / 2, -5, Size.rod_y_dz])
                     .setColor (0.2, 0.3, 0.3, 0.5)
             );
             // Idlers 
